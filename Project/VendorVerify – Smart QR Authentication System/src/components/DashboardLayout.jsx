@@ -97,7 +97,7 @@ export default function DashboardLayout({ children, role, title }) {
             </aside>
 
             {/* Main Content */}
-            <main style={{ marginLeft: '280px', flex: 1, padding: '2rem 3rem' }}>
+            {/* <main style={{ marginLeft: '280px', flex: 1, padding: '2rem 3rem' }}>
                 <header style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         <h1 style={{ fontSize: '1.875rem' }}>{title}</h1>
@@ -115,7 +115,7 @@ export default function DashboardLayout({ children, role, title }) {
                 </header>
 
                 {children}
-            </main>
+            </main> */}
         </div>
     );
 }
