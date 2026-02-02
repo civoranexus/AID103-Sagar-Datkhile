@@ -21,30 +21,7 @@ A full-stack secure QR authentication platform for verifying vendor identity and
 - `/supabase`: SQL schema and RLS policies.
 - `/public`: Static assets.
 
-## ⚙️ Setup Instructions
 
-### 1. Database Setup
-- Create a new project on [Supabase](https://supabase.com).
-- Run the SQL script found in `/supabase/schema.sql` in the Supabase SQL Editor.
-- Enable Email/Password Auth in the Supabase Dashboard.
-
-### 2. Environment Variables
-Create a `.env` file in the root directory based on `.env.example`:
-```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-```
-
-### 3. Installation
-```bash
-npm install
-```
-
-### 4. Running Locally
-```bash
-npm run dev
-```
 
 ## 🔒 Security Model
 - **JWT (Supabase Auth)**: All API requests and frontend routes are protected.
