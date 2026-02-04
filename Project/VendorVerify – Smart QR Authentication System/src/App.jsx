@@ -16,25 +16,38 @@ function App() {
     const [userRole, setUserRole] = useState(null);
 
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            if (session) fetchUserRole(session.user.id);
-            else setLoading(false);
-        });
+        let isMounted = true;
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const handleAuthState = async (session) => {
+            if (!isMounted) return;
             setSession(session);
-            if (session) fetchUserRole(session.user.id);
-            else {
+
+            if (session) {
+                await fetchUserRole(session.user.id);
+            } else {
                 setUserRole(null);
                 setLoading(false);
             }
+        };
+
+        // Initial check
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            handleAuthState(session);
         });
 
-        return () => subscription.unsubscribe();
+        // Listen for changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            handleAuthState(session);
+        });
+
+        return () => {
+            isMounted = false;
+            subscription.unsubscribe();
+        };
     }, []);
 
-    const fetchUserRole = async (userId) => {
+    const fetchUserRole = async (userId, retries = 2) => {
+        setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('users')
@@ -42,10 +55,19 @@ function App() {
                 .eq('id', userId)
                 .single();
 
-            if (error) throw error;
+            if (error || !data) {
+                if (retries > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    return fetchUserRole(userId, retries - 1);
+                }
+                console.error('Profile not found, signing out...');
+                await supabase.auth.signOut();
+                return;
+            }
             setUserRole(data.role);
         } catch (error) {
             console.error('Error fetching user role:', error.message);
+            await supabase.auth.signOut();
         } finally {
             setLoading(false);
         }

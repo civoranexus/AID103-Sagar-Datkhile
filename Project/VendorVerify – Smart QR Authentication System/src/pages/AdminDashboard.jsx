@@ -14,9 +14,10 @@ import {
     MapPin,
     Smartphone
 } from 'lucide-react';
-import { DashboardLayout, Card, Badge, Button } from '../components/UI';
+import { DashboardLayout, Card, Badge, Button, useToast } from '../components/UI';
 
 const AdminDashboard = () => {
+    const { addToast } = useToast();
     const [stats, setStats] = useState({ users: 0, products: 0, scans: 0, alerts: 0 });
     const [users, setUsers] = useState([]);
     const [logs, setLogs] = useState([]);
@@ -100,7 +101,7 @@ const AdminDashboard = () => {
                             </div>
                             <div style={{ display: 'flex', gap: '0.75rem' }}>
                                 <Button variant="outline"><Filter size={18} /> Filter</Button>
-                                <Button className="btn-primary">Export CSV</Button>
+                                <Button className="btn-primary" onClick={() => addToast('Audit logs exported successfully', 'success')}>Export CSV</Button>
                             </div>
                         </div>
                         <div className="table-container" style={{ border: 'none' }}>

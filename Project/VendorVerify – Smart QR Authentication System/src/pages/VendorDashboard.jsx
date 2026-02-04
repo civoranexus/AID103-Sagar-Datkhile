@@ -13,10 +13,11 @@ import {
     ExternalLink,
     Clock
 } from 'lucide-react';
-import { DashboardLayout, Button, Card, Badge, Modal } from '../components/UI';
+import { DashboardLayout, Button, Card, Badge, Modal, useToast } from '../components/UI';
 import { QRCodeSVG } from 'qrcode.react';
 
 const VendorDashboard = () => {
+    const { addToast } = useToast();
     const [products, setProducts] = useState([]);
     const [history, setHistory] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,47 +33,99 @@ const VendorDashboard = () => {
         setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
 
-        // Fetch products
-        const { data: productsData } = await supabase
-            .from('products')
-            .select('*')
-            .eq('vendor_id', user.id)
-            .order('created_at', { ascending: false });
+        // 1. Get the internal vendor record id
+        const { data: vendor } = await supabase
+            .from('vendors')
+            .select('id')
+            .eq('user_id', user.id)
+            .single();
 
-        // Fetch scan history for vendor's products
-        const { data: historyData } = await supabase
-            .from('audit_logs')
-            .select('*, products(name, sku)')
-            .eq('vendor_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(10);
+        if (vendor) {
+            // Fetch products
+            const { data: productsData } = await supabase
+                .from('products')
+                .select('*')
+                .eq('vendor_id', vendor.id)
+                .order('created_at', { ascending: false });
 
-        setProducts(productsData || []);
-        setHistory(historyData || []);
+            // Fetch scan history for vendor's products
+            const { data: historyData } = await supabase
+                .from('audit_logs')
+                .select('*, products(name, sku)')
+                .eq('vendor_id', vendor.id)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            setProducts(productsData || []);
+            setHistory(historyData || []);
+        }
         setLoading(false);
     };
 
     const handleCreateProduct = async (e) => {
         e.preventDefault();
-        const { data: { user } } = await supabase.auth.getUser();
-        const token = crypto.randomUUID(); // Simplified for demo, in production use /api/generate
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
 
-        const { data, error } = await supabase
-            .from('products')
-            .insert([{
-                name: newProduct.name,
-                sku: newProduct.sku,
-                description: newProduct.description,
-                qr_token: token,
-                vendor_id: user.id,
-                status: 'active'
-            }])
-            .select();
+            // 1. Get vendor profile for current user
+            const { data: vendor } = await supabase
+                .from('vendors')
+                .select('id')
+                .eq('user_id', user.id)
+                .single();
 
-        if (data) {
-            setProducts([data[0], ...products]);
-            setIsModalOpen(false);
-            setNewProduct({ name: '', sku: '', description: '' });
+            if (!vendor) throw new Error('Vendor profile not found');
+
+            // 2. Create product record
+            const { data: product, error: productError } = await supabase
+                .from('products')
+                .insert([{
+                    name: newProduct.name,
+                    sku: newProduct.sku,
+                    batch_id: newProduct.sku, // Using sku as batch_id for now
+                    description: newProduct.description,
+                    vendor_id: vendor.id
+                }])
+                .select()
+                .single();
+
+            if (productError) throw productError;
+
+            // 3. Call secure backend API to generate QR
+            const { data: { session } } = await supabase.auth.getSession();
+
+            const apiResponse = await fetch('/api/qr/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({
+                    product_id: product.id,
+                    vendor_id: vendor.id
+                })
+            });
+
+            const qrData = await apiResponse.json();
+
+            if (qrData.success) {
+                // Fetch updated products list
+                fetchData();
+                setIsModalOpen(false);
+                setNewProduct({ name: '', sku: '', description: '' });
+                addToast('Product registered and secure QR generated!', 'success');
+
+                // Show the generated QR immediately
+                setSelectedQR({
+                    ...product,
+                    qrImage: qrData.qrImage
+                });
+            } else {
+                throw new Error(qrData.error || 'Failed to generate QR');
+            }
+        } catch (error) {
+            console.error('Operation failed:', error);
+            addToast(error.message || 'Failed to create product', 'error');
         }
     };
 
@@ -246,14 +299,37 @@ const VendorDashboard = () => {
                 {selectedQR && (
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ background: 'white', padding: '2rem', borderRadius: ' var(--radius-lg)', border: '1px solid var(--border)', display: 'inline-block', marginBottom: '1.5rem' }}>
-                            <QRCodeSVG value={selectedQR.qr_token} size={200} level="H" />
+                            {selectedQR.qrImage ? (
+                                <img src={selectedQR.qrImage} alt="Product QR" style={{ width: 200, height: 200 }} />
+                            ) : (
+                                <div style={{ width: 200, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                                    QR Not Available for Re-view
+                                </div>
+                            )}
                         </div>
                         <h3 style={{ marginBottom: '0.5rem' }}>{selectedQR.name}</h3>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>SKU: {selectedQR.sku}</p>
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
-                            <Button variant="outline" style={{ flex: 1 }}><Download size={18} /> Download</Button>
-                            <Button className="btn-accent" style={{ flex: 1 }}><Copy size={18} /> Copy Token</Button>
+                            {selectedQR.qrImage && (
+                                <Button variant="outline" style={{ flex: 1 }} onClick={() => {
+                                    const link = document.createElement('a');
+                                    link.href = selectedQR.qrImage;
+                                    link.download = `QR-${selectedQR.sku}.png`;
+                                    link.click();
+                                }}>
+                                    <Download size={18} /> Download
+                                </Button>
+                            )}
+                            <Button className="btn-accent" style={{ flex: 1 }} onClick={() => {
+                                if (selectedQR.qrImage) {
+                                    addToast('Image available in download', 'success');
+                                } else {
+                                    addToast('Reference: ' + selectedQR.id, 'info');
+                                }
+                            }}>
+                                <Copy size={18} /> Copy Info
+                            </Button>
                         </div>
                     </div>
                 )}

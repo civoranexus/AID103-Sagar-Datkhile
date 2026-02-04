@@ -15,10 +15,11 @@ import {
     Building2,
     Clock
 } from 'lucide-react';
-import { Button, Card, Badge, Modal } from '../components/UI';
+import { Button, Card, Badge, Modal, useToast } from '../components/UI';
 import { useNavigate } from 'react-router-dom';
 
 const VerifierDashboard = () => {
+    const { addToast } = useToast();
     const navigate = useNavigate();
     const [scanResult, setScanResult] = useState(null);
     const [isScanning, setIsScanning] = useState(true);
@@ -62,55 +63,53 @@ const VerifierDashboard = () => {
         setLoading(true);
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: { session } } = await supabase.auth.getSession();
 
-            // 1. Check if product exists with this token
-            const { data: product, error: productError } = await supabase
-                .from('products')
-                .select('*')
-                .eq('qr_token', decodedText)
-                .single();
-
-            let status = 'invalid';
-            let productData = null;
-
-            if (product) {
-                // 2. Check if already scanned (Audit Logs)
-                const { data: previousScans } = await supabase
-                    .from('audit_logs')
-                    .select('*')
-                    .eq('qr_reference', decodedText)
-                    .eq('status', 'valid');
-
-                if (previousScans && previousScans.length > 0) {
-                    status = 'used';
-                } else {
-                    status = 'valid';
-                }
-                productData = product;
-            }
-
-            // 3. Log the scan attempt
-            await supabase.from('audit_logs').insert([{
-                qr_reference: decodedText,
-                product_id: productData?.id,
-                vendor_id: productData?.vendor_id,
-                verifier_id: user.id,
-                status: status,
-                ip_address: 'Logged Locally',
-                location: 'Standard Verification'
-            }]);
-
-            setScanResult({
-                status,
-                product: productData,
-                timestamp: new Date().toISOString()
+            // Call the secure backend verification API
+            const response = await fetch('/api/qr/verify', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.access_token}`
+                },
+                body: JSON.stringify({ token: decodedText })
             });
+
+            const result = await response.json();
+
+            if (result.status === 'valid' && result.product_id) {
+                // Fetch product details if valid
+                const { data: product } = await supabase
+                    .from('products')
+                    .select('*')
+                    .eq('id', result.product_id)
+                    .single();
+
+                setScanResult({
+                    status: 'valid',
+                    product: product,
+                    timestamp: new Date().toISOString()
+                });
+                addToast('Success! Product authenticated.', 'success');
+            } else if (result.status === 'used') {
+                setScanResult({
+                    status: 'used',
+                    timestamp: new Date().toISOString()
+                });
+                addToast('Warning: This QR has already been used.', 'warning');
+            } else {
+                setScanResult({
+                    status: 'invalid',
+                    timestamp: new Date().toISOString()
+                });
+                addToast('Alert: Invalid or tampered token detected.', 'error');
+            }
 
             fetchRecentScans();
         } catch (error) {
             console.error('Verification error:', error);
             setScanResult({ status: 'invalid' });
+            addToast('Network error during verification', 'error');
         } finally {
             setLoading(false);
         }

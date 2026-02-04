@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ShieldPlus, User, Mail, Lock, Building, Loader2, Check } from 'lucide-react';
-import { Button, Card } from '../components/UI';
+import { ShieldPlus, User, Mail, Lock, Building, Loader2, Check, ShieldCheck, ScanQrCode } from 'lucide-react';
+import { Button, Card, useToast } from '../components/UI';
 
 const Register = () => {
     const navigate = useNavigate();
+    const { addToast } = useToast();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [formData, setFormData] = useState({
@@ -43,6 +44,21 @@ const Register = () => {
                     ]);
 
                 if (profileError) throw profileError;
+
+                // 3. If vendor, also create vendor profile
+                if (formData.role === 'vendor') {
+                    const { error: vendorError } = await supabase
+                        .from('vendors')
+                        .insert([
+                            {
+                                user_id: authData.user.id,
+                                company_name: formData.fullName
+                            }
+                        ]);
+                    if (vendorError) throw vendorError;
+                }
+
+                addToast('Account created successfully! Welcome to the network.', 'success');
 
                 // Redirect based on role
                 if (formData.role === 'vendor') navigate('/vendor');
@@ -179,7 +195,7 @@ const Register = () => {
                                     }}
                                 >
                                     {formData.role === 'verifier' && <Check size={14} style={{ position: 'absolute', top: 8, right: 8, color: 'var(--accent)' }} />}
-                                    <ShieldCheck size={24} style={{ marginBottom: '0.5rem', color: formData.role === 'verifier' ? 'var(--accent)' : 'var(--text-muted)' }} />
+                                    <ScanQrCode size={24} style={{ marginBottom: '0.5rem', color: formData.role === 'verifier' ? 'var(--accent)' : 'var(--text-muted)' }} />
                                     <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Verifier</div>
                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Scan & Verify</div>
                                 </div>
@@ -203,24 +219,5 @@ const Register = () => {
         </div>
     );
 };
-
-// Re-using ShieldCheck from lucide (already imported in Login, but let's make sure it's here)
-const ShieldCheck = ({ size, color, style }) => (
-    <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke={color}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={style}
-    >
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
-        <path d="m9 12 2 2 4-4" />
-    </svg>
-);
 
 export default Register;

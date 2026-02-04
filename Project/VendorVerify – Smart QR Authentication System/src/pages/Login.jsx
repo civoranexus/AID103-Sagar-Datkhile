@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ShieldCheck, Mail, Lock, Loader2 } from 'lucide-react';
-import { Button, Input, Card } from '../components/UI';
+import { Button, Input, Card, useToast } from '../components/UI';
 
 const Login = () => {
     const navigate = useNavigate();
+    const { addToast } = useToast();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [formData, setFormData] = useState({
@@ -26,19 +27,22 @@ const Login = () => {
 
             if (loginError) throw loginError;
 
-            // Role redirection is handled in App.jsx, but we can proactively navigate
+            // Check if profile exists
             const { data: userData, error: roleError } = await supabase
                 .from('users')
                 .select('role')
                 .eq('id', data.user.id)
                 .single();
 
-            if (roleError) throw roleError;
+            if (roleError || !userData) {
+                console.error('Profile fetch failed:', roleError);
+                addToast('Account exists but profile is missing. Please Register again.', 'warning');
+                await supabase.auth.signOut();
+                return;
+            }
 
-            const role = userData.role;
-            if (role === 'vendor') navigate('/vendor');
-            else if (role === 'verifier') navigate('/verifier');
-            else if (role === 'admin') navigate('/admin');
+            addToast('Welcome back! Authentication successful.', 'success');
+            // Redirection is handled by App.jsx auth listener
 
         } catch (err) {
             setError(err.message || 'Invalid login credentials');

@@ -1,8 +1,119 @@
-import React from 'react';
-import { LogOut, LayoutDashboard, Database, ClipboardList, ShieldAlert, User, Menu, X, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { LogOut, LayoutDashboard, Database, ClipboardList, ShieldAlert, User, Menu, X, CheckCircle, AlertTriangle, XCircle, Bell, Info } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useLocation } from 'react-router-dom';
 
+// --- Toast System ---
+const ToastContext = createContext(null);
+
+export const ToastProvider = ({ children }) => {
+    const [toasts, setToasts] = useState([]);
+
+    const addToast = useCallback((message, type = 'info') => {
+        const id = Math.random().toString(36).substr(2, 9);
+        setToasts(prev => [...prev, { id, message, type }]);
+        setTimeout(() => {
+            setToasts(prev => prev.filter(t => t.id !== id));
+        }, 5000);
+    }, []);
+
+    const removeToast = useCallback((id) => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    }, []);
+
+    return (
+        <ToastContext.Provider value={{ addToast }}>
+            {children}
+            <div style={{
+                position: 'fixed',
+                top: '2rem',
+                right: '2rem',
+                zIndex: 9999,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                pointerEvents: 'none',
+                width: '100%',
+                maxWidth: '400px'
+            }}>
+                <div style={{ position: 'relative', width: '100%', height: '0' }}>
+                    {toasts.slice(-3).reverse().map((toast, index) => {
+                        // index 0 is newest, index 1 is second newest, etc.
+                        const scale = index === 0 ? 1 : index === 1 ? 0.96 : 0.92;
+                        const opacity = index === 0 ? 1 : index === 1 ? 0.9 : 0.8;
+                        const translateY = index === 0 ? 0 : index === 1 ? 10 : 20; // Exact offsets from prompt
+                        const blur = index === 0 ? 12 : 12 + (index * 4);
+                        const zIndex = 100 - index;
+
+                        return (
+                            <div
+                                key={toast.id}
+                                className="glass-toast"
+                                style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    right: 0,
+                                    width: '100%',
+                                    maxWidth: '350px',
+                                    padding: '1rem 1.25rem',
+                                    borderRadius: '1.25rem',
+                                    background: 'rgba(255, 255, 255, 0.45)',
+                                    backdropFilter: `blur(${blur}px) saturate(180%)`,
+                                    WebkitBackdropFilter: `blur(${blur}px) saturate(180%)`,
+                                    border: '1px solid rgba(255, 255, 255, 0.4)',
+                                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.875rem',
+                                    color: '#000000',
+                                    fontWeight: '600',
+                                    pointerEvents: 'auto',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                                    transform: `translateY(${translateY}px) scale(${scale})`,
+                                    transformOrigin: 'right top',
+                                    opacity: opacity,
+                                    zIndex: zIndex,
+                                }}
+                                onClick={() => removeToast(toast.id)}
+                            >
+                                <div style={{
+                                    color: toast.type === 'success' ? '#10B981' :
+                                        toast.type === 'error' ? '#EF4444' :
+                                            toast.type === 'warning' ? '#F59E0B' : '#3B82F6',
+                                    display: 'flex',
+                                    flexShrink: 0
+                                }}>
+                                    {toast.type === 'success' && <CheckCircle size={20} />}
+                                    {toast.type === 'error' && <XCircle size={20} />}
+                                    {toast.type === 'warning' && <AlertTriangle size={20} />}
+                                    {toast.type === 'info' && <Info size={20} />}
+                                </div>
+                                <span style={{
+                                    flex: 1,
+                                    fontSize: '0.9rem',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                }}>
+                                    {toast.message}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </ToastContext.Provider>
+    );
+};
+
+export const useToast = () => {
+    const context = useContext(ToastContext);
+    if (!context) throw new Error('useToast must be used within a ToastProvider');
+    return context;
+};
+
+// --- Standard Components ---
 export const Button = ({ children, variant = 'primary', className = '', ...props }) => {
     const variantClass = `btn-${variant}`;
     return (
@@ -64,11 +175,13 @@ export const Modal = ({ isOpen, onClose, title, children }) => {
 export const DashboardLayout = ({ children, role, navItems }) => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { addToast } = useToast();
     const [isSidebarOpen, setSidebarOpen] = React.useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
+        addToast('Sign out successful', 'success');
         navigate('/login');
     };
 
@@ -164,7 +277,7 @@ export const DashboardLayout = ({ children, role, navItems }) => {
                     }}>
                         <LogOut size={24} />
                     </div>
-                    <h3 style={{ marginBottom: '1rem' }}>You want log out?</h3>
+                    <h3 style={{ marginBottom: '1rem' }}>Do you really want to log out?</h3>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
                         You will need to enter your credentials again to access your secure dashboard.
                     </p>
