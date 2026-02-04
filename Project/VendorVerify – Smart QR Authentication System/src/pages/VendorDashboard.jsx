@@ -130,9 +130,9 @@ const VendorDashboard = () => {
     };
 
     const navItems = [
-        { label: 'Overview', path: '/vendor', icon: LayoutDashboard },
-        { label: 'Products', path: '/vendor/products', icon: QrCode },
-        { label: 'Scan History', path: '/vendor/history', icon: History },
+        { label: 'Overview', path: '/VendorDashboard', icon: LayoutDashboard },
+        { label: 'Products', path: '/VendorDashboard/products', icon: QrCode },
+        { label: 'Scan History', path: '/VendorDashboard/history', icon: History },
     ];
 
     return (

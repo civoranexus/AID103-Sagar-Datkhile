@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { LogOut, LayoutDashboard, Database, ClipboardList, ShieldAlert, User, Menu, X, CheckCircle, AlertTriangle, XCircle, Bell, Info } from 'lucide-react';
+import { LogOut, LayoutDashboard, Database, ClipboardList, ShieldAlert, User, Menu, X, CheckCircle, AlertTriangle, XCircle, Bell, Info, ShieldCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -38,10 +38,9 @@ export const ToastProvider = ({ children }) => {
             }}>
                 <div style={{ position: 'relative', width: '100%', height: '0' }}>
                     {toasts.slice(-3).reverse().map((toast, index) => {
-                        // index 0 is newest, index 1 is second newest, etc.
                         const scale = index === 0 ? 1 : index === 1 ? 0.96 : 0.92;
                         const opacity = index === 0 ? 1 : index === 1 ? 0.9 : 0.8;
-                        const translateY = index === 0 ? 0 : index === 1 ? 10 : 20; // Exact offsets from prompt
+                        const translateY = index === 0 ? 0 : index === 1 ? 10 : 20;
                         const blur = index === 0 ? 12 : 12 + (index * 4);
                         const zIndex = 100 - index;
 
@@ -168,7 +167,7 @@ export const Modal = ({ isOpen, onClose, title, children }) => {
                     {children}
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
 
@@ -176,13 +175,13 @@ export const DashboardLayout = ({ children, role, navItems }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { addToast } = useToast();
-    const [isSidebarOpen, setSidebarOpen] = React.useState(false);
-    const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
+    const [isSidebarOpen, setSidebarOpen] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
         addToast('Sign out successful', 'success');
-        navigate('/login');
+        navigate('/Login');
     };
 
     return (
@@ -190,12 +189,12 @@ export const DashboardLayout = ({ children, role, navItems }) => {
             {/* Sidebar */}
             <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
                 <div style={{ marginBottom: '3rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ background: 'var(--accent)', padding: '0.5rem', borderRadius: ' var(--radius-md)' }}>
-                        <ShieldAlert size={24} color="white" />
+                    <div style={{ background: 'var(--accent)', padding: '0.5rem', borderRadius: 'var(--radius-md)' }}>
+                        <ShieldCheck size={24} color="white" />
                     </div>
                     <div>
-                        <h2 className="font-display" style={{ fontSize: '1.1rem', letterSpacing: '-0.02em' }}>VendorVerify</h2>
-                        <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', opacity: 0.6 }}>{role} Portal</span>
+                        <h2 className="font-display" style={{ fontSize: '1.1rem', letterSpacing: '-0.02em' }}>Vendor Verify</h2>
+                        <span style={{ fontSize: '0.65rem', opacity: 0.6 }}>{role} Dashboard</span>
                     </div>
                 </div>
 
@@ -241,7 +240,6 @@ export const DashboardLayout = ({ children, role, navItems }) => {
             <main className="main-content">
                 <header className="top-nav">
                     <div style={{ display: 'none' }}>
-                        {/* Mobile Toggle would go here */}
                     </div>
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
@@ -257,7 +255,6 @@ export const DashboardLayout = ({ children, role, navItems }) => {
                 </div>
             </main>
 
-            {/* Logout Confirmation Modal */}
             <Modal
                 isOpen={showLogoutConfirm}
                 onClose={() => setShowLogoutConfirm(false)}

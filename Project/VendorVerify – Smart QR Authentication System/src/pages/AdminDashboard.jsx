@@ -55,10 +55,10 @@ const AdminDashboard = () => {
     };
 
     const navItems = [
-        { label: 'Overview', path: '/admin', icon: BarChart3 },
-        { label: 'User Management', path: '/admin/users', icon: Users },
-        { label: 'System Logs', path: '/admin/logs', icon: FileText },
-        { label: 'Security Alerts', path: '/admin/alerts', icon: ShieldAlert },
+        { label: 'Overview', path: '/AdminDashboard', icon: BarChart3 },
+        { label: 'User Management', path: '/AdminDashboard/users', icon: Users },
+        { label: 'System Logs', path: '/AdminDashboard/logs', icon: FileText },
+        { label: 'Security Alerts', path: '/AdminDashboard/alerts', icon: ShieldAlert },
     ];
 
     return (

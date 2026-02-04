@@ -1,14 +1,14 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { supabase } from './lib/supabase';
 
-// Pages (to be created)
-import Login from './pages/Login';
-import Register from './pages/Register';
-import VendorDashboard from './pages/VendorDashboard';
-import VerifierDashboard from './pages/VerifierDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import NotFound from './pages/NotFound';
+// Pages
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const VendorDashboard = lazy(() => import('./pages/VendorDashboard'));
+const VerifierDashboard = lazy(() => import('./pages/VerifierDashboard'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 function App() {
     const [session, setSession] = useState(null);
@@ -35,7 +35,7 @@ function App() {
             handleAuthState(session);
         });
 
-        // Listen for changes
+        // Listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             handleAuthState(session);
         });
@@ -60,55 +60,65 @@ function App() {
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     return fetchUserRole(userId, retries - 1);
                 }
-                console.error('Profile not found, signing out...');
+                console.warn('Profile sync required...');
                 await supabase.auth.signOut();
                 return;
             }
             setUserRole(data.role);
         } catch (error) {
-            console.error('Error fetching user role:', error.message);
+            console.error('Role auth error:', error);
             await supabase.auth.signOut();
         } finally {
             setLoading(false);
         }
     };
 
+    // Global Loading State
     if (loading) {
-        return <div className="loading-screen">Loading...</div>;
+        return (
+            <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>SECURE LOADING</div>
+                    <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Establishing Encryption Protocol...</div>
+                </div>
+            </div>
+        );
     }
 
     return (
-        <Router>
+        <Suspense fallback={
+            <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}>
+                <div style={{ fontSize: '0.9rem', color: '#64748b' }}>Loading security module...</div>
+            </div>
+        }>
             <Routes>
-                <Route path="/" element={!session ? <Navigate to="/login" /> : <RoleRedirect role={userRole} />} />
-                <Route path="/login" element={session ? <RoleRedirect role={userRole} /> : <Login />} />
-                <Route path="/register" element={session ? <RoleRedirect role={userRole} /> : <Register />} />
+                {/* Public Routes */}
+                <Route path="/Login" element={session && userRole ? <Navigate to={getDashboardPath(userRole)} /> : <Login />} />
+                <Route path="/Register" element={session && userRole ? <Navigate to={getDashboardPath(userRole)} /> : <Register />} />
+
+                {/* Root Redirects */}
+                <Route path="/" element={session && userRole ? <Navigate to={getDashboardPath(userRole)} /> : session && !userRole ? <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: '1.25rem', fontWeight: 600, color: '#3b82f6', marginBottom: '0.5rem' }}>FINALIZING PROFILE</div><div style={{ fontSize: '0.875rem', opacity: 0.6 }}>Synchronizing identity...</div></div></div> : <Navigate to="/Login" />} />
+                <Route path="/login" element={<Navigate to="/Login" />} />
+                <Route path="/register" element={<Navigate to="/Register" />} />
 
                 {/* Protected Routes */}
-                <Route path="/vendor" element={session && userRole === 'vendor' ? <VendorDashboard /> : <Navigate to="/login" />} />
-                <Route path="/vendor/products" element={session && userRole === 'vendor' ? <VendorDashboard /> : <Navigate to="/login" />} />
-                <Route path="/vendor/history" element={session && userRole === 'vendor' ? <VendorDashboard /> : <Navigate to="/login" />} />
+                <Route path="/VendorDashboard/*" element={session && userRole === 'vendor' ? <VendorDashboard /> : <Navigate to="/Login" />} />
+                <Route path="/VerifierDashboard/*" element={session && userRole === 'verifier' ? <VerifierDashboard /> : <Navigate to="/Login" />} />
+                <Route path="/AdminDashboard/*" element={session && userRole === 'admin' ? <AdminDashboard /> : <Navigate to="/Login" />} />
 
-                <Route path="/verifier" element={session && userRole === 'verifier' ? <VerifierDashboard /> : <Navigate to="/login" />} />
-                <Route path="/verifier/history" element={session && userRole === 'verifier' ? <VerifierDashboard /> : <Navigate to="/login" />} />
-
-                <Route path="/admin" element={session && userRole === 'admin' ? <AdminDashboard /> : <Navigate to="/login" />} />
-                <Route path="/admin/users" element={session && userRole === 'admin' ? <AdminDashboard /> : <Navigate to="/login" />} />
-                <Route path="/admin/logs" element={session && userRole === 'admin' ? <AdminDashboard /> : <Navigate to="/login" />} />
-
-                <Route path="/404" element={<NotFound />} />
-                <Route path="*" element={<Navigate to="/404" />} />
+                <Route path="/NotFound" element={<NotFound />} />
+                <Route path="*" element={<Navigate to="/NotFound" />} />
             </Routes>
-        </Router>
+        </Suspense>
     );
 }
 
-function RoleRedirect({ role }) {
-    if (!role) return <div className="loading-screen">Finalizing profile...</div>;
-    if (role === 'vendor') return <Navigate to="/vendor" />;
-    if (role === 'verifier') return <Navigate to="/verifier" />;
-    if (role === 'admin') return <Navigate to="/admin" />;
-    return <Navigate to="/login" />;
+// Helper to determine dashboard path
+function getDashboardPath(role) {
+    if (role === 'vendor') return '/VendorDashboard';
+    if (role === 'verifier') return '/VerifierDashboard';
+    if (role === 'admin') return '/AdminDashboard';
+    return '/Login';
 }
 
 export default App;

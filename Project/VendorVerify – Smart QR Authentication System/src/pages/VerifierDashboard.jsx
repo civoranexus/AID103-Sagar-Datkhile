@@ -121,7 +121,7 @@ const VerifierDashboard = () => {
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
-        navigate('/login');
+        navigate('/Login');
     };
 
     const resetScanner = () => {

@@ -4,11 +4,11 @@ import { supabase } from '../lib/supabase';
 import { ShieldCheck, Mail, Lock, Loader2 } from 'lucide-react';
 import { Button, Input, Card, useToast } from '../components/UI';
 
+
 const Login = () => {
     const navigate = useNavigate();
     const { addToast } = useToast();
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
     const [formData, setFormData] = useState({
         email: '',
         password: ''
@@ -17,7 +17,6 @@ const Login = () => {
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setError('');
 
         try {
             const { data, error: loginError } = await supabase.auth.signInWithPassword({
@@ -41,11 +40,11 @@ const Login = () => {
                 return;
             }
 
-            addToast('Welcome back! Authentication successful.', 'success');
+            addToast('Welcome back!', 'success');
             // Redirection is handled by App.jsx auth listener
 
         } catch (err) {
-            setError(err.message || 'Invalid login credentials');
+            addToast(err.message || 'Invalid login credentials', 'error');
         } finally {
             setLoading(false);
         }
@@ -76,27 +75,13 @@ const Login = () => {
                     }}>
                         <ShieldCheck color="white" size={32} />
                     </div>
-                    <h1 className="font-display" style={{ fontSize: '1.875rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>Secure Portal</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Enter your credentials to access VendorVerify</p>
+                    <h1 className="font-display" style={{ fontSize: '1.875rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>Vendor Verify</h1>
+                    <p style={{ color: 'var(--text-muted)' }}>Enter your credentials to access</p>
+                    <p style={{ color: 'var(--text-muted)' }}>QR Authentication System</p>
+
                 </div>
 
                 <Card style={{ padding: '2.5rem' }}>
-                    {error && (
-                        <div style={{
-                            padding: '0.875rem 1rem',
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                            color: 'var(--error)',
-                            borderRadius: 'var(--radius-md)',
-                            fontSize: '0.875rem',
-                            marginBottom: '1.5rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem'
-                        }}>
-                            <Lock size={16} /> {error}
-                        </div>
-                    )}
-
                     <form onSubmit={handleLogin}>
                         <div style={{ marginBottom: '1.5rem' }}>
                             <label className="input-label">Email Address</label>
@@ -144,7 +129,7 @@ const Login = () => {
                 </Card>
 
                 <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                    Don't have an account? <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>Register your business</Link>
+                    Don't have an account? <Link to="/Register" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>Register your business</Link>
                 </p>
             </div>
         </div>

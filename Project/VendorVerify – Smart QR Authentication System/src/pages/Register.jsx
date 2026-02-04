@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ShieldPlus, User, Mail, Lock, Building, Loader2, Check, ShieldCheck, ScanQrCode } from 'lucide-react';
+import { ShieldPlus, User, Mail, Lock, Building, Loader2, Check, ShieldCheck, Scan } from 'lucide-react';
 import { Button, Card, useToast } from '../components/UI';
 
 const Register = () => {
     const navigate = useNavigate();
     const { addToast } = useToast();
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -19,13 +18,18 @@ const Register = () => {
     const handleRegister = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setError('');
 
         try {
             // 1. Sign up user
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: formData.email,
                 password: formData.password,
+                options: {
+                    data: {
+                        full_name: formData.fullName,
+                        role: formData.role
+                    }
+                }
             });
 
             if (authError) throw authError;
@@ -61,11 +65,11 @@ const Register = () => {
                 addToast('Account created successfully! Welcome to the network.', 'success');
 
                 // Redirect based on role
-                if (formData.role === 'vendor') navigate('/vendor');
-                else navigate('/verifier');
+                if (formData.role === 'vendor') navigate('/VendorDashboard');
+                else navigate('/VerifierDashboard');
             }
         } catch (err) {
-            setError(err.message);
+            addToast(err.message || 'Registration failed', 'error');
         } finally {
             setLoading(false);
         }
@@ -101,17 +105,6 @@ const Register = () => {
                 </div>
 
                 <Card style={{ padding: '2.5rem' }}>
-                    {error && (
-                        <div style={{
-                            padding: '0.875rem 1rem',
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                            color: 'var(--error)',
-                            borderRadius: 'var(--radius-md)',
-                            fontSize: '0.875rem',
-                            marginBottom: '1.5rem'
-                        }}>{error}</div>
-                    )}
-
                     <form onSubmit={handleRegister}>
                         <div style={{ marginBottom: '1.25rem' }}>
                             <label className="input-label">Full Name / Entity Name</label>
@@ -195,7 +188,7 @@ const Register = () => {
                                     }}
                                 >
                                     {formData.role === 'verifier' && <Check size={14} style={{ position: 'absolute', top: 8, right: 8, color: 'var(--accent)' }} />}
-                                    <ScanQrCode size={24} style={{ marginBottom: '0.5rem', color: formData.role === 'verifier' ? 'var(--accent)' : 'var(--text-muted)' }} />
+                                    <Scan size={24} style={{ marginBottom: '0.5rem', color: formData.role === 'verifier' ? 'var(--accent)' : 'var(--text-muted)' }} />
                                     <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Verifier</div>
                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Scan & Verify</div>
                                 </div>
@@ -213,7 +206,7 @@ const Register = () => {
                 </Card>
 
                 <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                    Already have an account? <Link to="/login" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>Sign in here</Link>
+                    Already have an account? <Link to="/Login" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>Sign in here</Link>
                 </p>
             </div>
         </div>
