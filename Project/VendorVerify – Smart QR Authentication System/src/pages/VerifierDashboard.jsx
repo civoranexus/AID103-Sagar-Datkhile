@@ -1,244 +1,286 @@
-import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
-import DashboardLayout from '../components/DashboardLayout';
-import { Card, Button } from '../components/UI';
+import React, { useState, useEffect } from 'react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { ShieldCheck, ShieldAlert, ShieldQuestion, Camera, History } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import {
+    ShieldCheck,
+    ShieldAlert,
+    History,
+    Scan,
+    LogOut,
+    CheckCircle2,
+    XCircle,
+    AlertTriangle,
+    Loader2,
+    Package,
+    Building2,
+    Clock
+} from 'lucide-react';
+import { Button, Card, Badge, Modal } from '../components/UI';
+import { useNavigate } from 'react-router-dom';
 
-export default function VerifierDashboard() {
+const VerifierDashboard = () => {
+    const navigate = useNavigate();
     const [scanResult, setScanResult] = useState(null);
-    const [isScanning, setIsScanning] = useState(false);
+    const [isScanning, setIsScanning] = useState(true);
     const [loading, setLoading] = useState(false);
-    const [history, setHistory] = useState([]);
-    const scannerRef = useRef(null);
+    const [recentScans, setRecentScans] = useState([]);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     useEffect(() => {
-        fetchHistory();
-        return () => {
-            if (scannerRef.current) {
-                scannerRef.current.clear().catch(err => console.error("Failed to clear scanner", err));
-            }
-        };
-    }, []);
-
-    const fetchHistory = async () => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            const { data, error } = await supabase
-                .from('verification_logs')
-                .select(`
-          *,
-          qr_codes (
-            product_id,
-            products (name, batch_id)
-          )
-        `)
-                .order('created_at', { ascending: false })
-                .limit(10);
-
-            if (error) throw error;
-            setHistory(data);
-        } catch (err) {
-            console.error(err.message);
-        }
-    };
-
-    const startScanner = () => {
-        setIsScanning(true);
-        setScanResult(null);
-
-        setTimeout(() => {
-            const scanner = new Html5QrcodeScanner("reader", {
+        if (isScanning) {
+            const scanner = new Html5QrcodeScanner('reader', {
                 fps: 10,
                 qrbox: { width: 250, height: 250 },
-                rememberLastUsedCamera: true
+                aspectRatio: 1.0
             });
 
-            scanner.render(async (decodedText) => {
-                scanner.clear();
-                setIsScanning(false);
-                verifyToken(decodedText);
-            }, (error) => {
-                // console.warn(error);
-            });
+            scanner.render(onScanSuccess, onScanFailure);
 
-            scannerRef.current = scanner;
-        }, 100);
+            return () => {
+                scanner.clear().catch(error => console.error('Failed to clear scanner', error));
+            };
+        }
+    }, [isScanning]);
+
+    useEffect(() => {
+        fetchRecentScans();
+    }, []);
+
+    const fetchRecentScans = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data } = await supabase
+            .from('audit_logs')
+            .select('*, products(name, sku)')
+            .eq('verifier_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(5);
+        setRecentScans(data || []);
     };
 
-    const verifyToken = async (token) => {
+    const onScanSuccess = async (decodedText) => {
+        setIsScanning(false);
         setLoading(true);
+
         try {
-            // In a real app, we'd call an Edge Function or Node API to hash and verify
-            // For this demo, we query directly (matching the simplified logic in VendorDashboard)
-            const { data: qr, error: qrError } = await supabase
-                .from('qr_codes')
-                .select(`
-          *,
-          products (
-            *,
-            vendors (company_name)
-          )
-        `)
-                .eq('hashed_token', token)
+            const { data: { user } } = await supabase.auth.getUser();
+
+            // 1. Check if product exists with this token
+            const { data: product, error: productError } = await supabase
+                .from('products')
+                .select('*')
+                .eq('qr_token', decodedText)
                 .single();
 
-            if (qrError || !qr) {
-                setScanResult({ status: 'invalid', message: 'Counterfeit or Invalid QR Code' });
-                logVerification(null, 'failure', 'Invalid token detected');
-            } else if (qr.status === 'used') {
-                setScanResult({ status: 'used', message: 'QR Code already used/expired', data: qr });
-                logVerification(qr.id, 'warning', 'Duplicate scan attempt');
-            } else {
-                setScanResult({ status: 'valid', message: 'Authentic Product Verified', data: qr });
-                logVerification(qr.id, 'success', 'Verification successful');
+            let status = 'invalid';
+            let productData = null;
 
-                // Mark as used if it's a one-time verify, or just update status
-                // await supabase.from('qr_codes').update({ status: 'used' }).eq('id', qr.id);
+            if (product) {
+                // 2. Check if already scanned (Audit Logs)
+                const { data: previousScans } = await supabase
+                    .from('audit_logs')
+                    .select('*')
+                    .eq('qr_reference', decodedText)
+                    .eq('status', 'valid');
+
+                if (previousScans && previousScans.length > 0) {
+                    status = 'used';
+                } else {
+                    status = 'valid';
+                }
+                productData = product;
             }
-        } catch (err) {
-            setScanResult({ status: 'error', message: err.message });
+
+            // 3. Log the scan attempt
+            await supabase.from('audit_logs').insert([{
+                qr_reference: decodedText,
+                product_id: productData?.id,
+                vendor_id: productData?.vendor_id,
+                verifier_id: user.id,
+                status: status,
+                ip_address: 'Logged Locally',
+                location: 'Standard Verification'
+            }]);
+
+            setScanResult({
+                status,
+                product: productData,
+                timestamp: new Date().toISOString()
+            });
+
+            fetchRecentScans();
+        } catch (error) {
+            console.error('Verification error:', error);
+            setScanResult({ status: 'invalid' });
         } finally {
             setLoading(false);
-            fetchHistory();
         }
     };
 
-    const logVerification = async (qrId, result, details) => {
-        try {
-            const { error } = await supabase
-                .from('verification_logs')
-                .insert([{
-                    qr_id: qrId,
-                    result: result,
-                    details: details,
-                    ip_address: 'Logged via Web UI'
-                }]);
-            if (error) console.error("Logging error:", error);
-        } catch (err) {
-            console.error(err);
-        }
+    function onScanFailure(error) {
+        // Silently handle scan failures to avoid UI clutter
+    }
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        navigate('/login');
+    };
+
+    const resetScanner = () => {
+        setScanResult(null);
+        setIsScanning(true);
     };
 
     return (
-        <DashboardLayout role="verifier" title="Product Verification">
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '2rem' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    {!isScanning && !scanResult && (
-                        <Card style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-                            <div style={{ width: '80px', height: '80px', backgroundColor: 'var(--background)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
-                                <Camera size={40} color="var(--accent)" />
+        <div style={{ minHeight: '100vh', backgroundColor: 'var(--background)' }}>
+            {/* Mobile Header */}
+            <header className="top-nav" style={{ justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ background: 'var(--primary)', padding: '0.4rem', borderRadius: ' var(--radius-sm)' }}>
+                        <ShieldCheck size={20} color="white" />
+                    </div>
+                    <span className="font-display" style={{ fontWeight: 700 }}>Verifier</span>
+                </div>
+                <button onClick={() => setShowLogoutConfirm(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)' }}>
+                    <LogOut size={20} />
+                </button>
+            </header>
+
+            {/* Logout Confirmation Modal */}
+            <Modal
+                isOpen={showLogoutConfirm}
+                onClose={() => setShowLogoutConfirm(false)}
+                title="Confirm Sign Out"
+            >
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        color: 'var(--error)',
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 1.5rem'
+                    }}>
+                        <LogOut size={24} />
+                    </div>
+                    <h3 style={{ marginBottom: '1rem' }}>Do you really want to log out?</h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+                        Verification sessions are secured. Signing out will terminate your current session.
+                    </p>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <Button variant="outline" style={{ flex: 1 }} onClick={() => setShowLogoutConfirm(false)}>Cancel</Button>
+                        <Button variant="primary" style={{ flex: 1, backgroundColor: 'var(--error)' }} onClick={handleLogout}>Log Out</Button>
+                    </div>
+                </div>
+            </Modal>
+
+            <main style={{ padding: '1.5rem', maxWidth: '600px', margin: '0 auto' }}>
+                {isScanning && (
+                    <div className="fade-in">
+                        <h2 style={{ marginBottom: '1rem', textAlign: 'center' }}>Scan Product QR</h2>
+                        <Card style={{ padding: '0', overflow: 'hidden', border: '4px solid var(--primary)' }}>
+                            <div id="reader" style={{ width: '100%' }}></div>
+                            <div style={{ padding: '1.5rem', textAlign: 'center', background: 'var(--primary)', color: 'white' }}>
+                                <Scan size={32} style={{ marginBottom: '0.5rem' }} />
+                                <p style={{ fontSize: '0.875rem' }}>Position the QR code within the frame</p>
                             </div>
-                            <h2 style={{ marginBottom: '1rem' }}>Ready to Scan?</h2>
-                            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', maxWidth: '300px', margin: '0 auto 2rem' }}>
-                                Point your camera at a VendorVerify QR code to instantly verify product authenticity.
+                        </Card>
+                    </div>
+                )}
+
+                {loading && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
+                        <Loader2 size={48} className="animate-spin" color="var(--accent)" />
+                        <p style={{ marginTop: '1rem', fontWeight: 600 }}>Authenticating Token...</p>
+                    </div>
+                )}
+
+                {scanResult && !loading && (
+                    <div className="fade-in">
+                        <div className={`result-panel ${scanResult.status === 'valid' ? 'result-valid' :
+                            scanResult.status === 'used' ? 'result-used' : 'result-invalid'
+                            }`}>
+                            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
+                                {scanResult.status === 'valid' && <CheckCircle2 size={64} color="var(--success)" />}
+                                {scanResult.status === 'used' && <AlertTriangle size={64} color="var(--warning)" />}
+                                {scanResult.status === 'invalid' && <XCircle size={64} color="var(--error)" />}
+                            </div>
+
+                            <h2 style={{
+                                fontSize: '2rem',
+                                marginBottom: '0.5rem',
+                                color: scanResult.status === 'valid' ? 'var(--success)' :
+                                    scanResult.status === 'used' ? 'var(--warning)' : 'var(--error)'
+                            }}>
+                                {scanResult.status === 'valid' ? 'Authentic Product' :
+                                    scanResult.status === 'used' ? 'Already Scanned' : 'Invalid / Tampered'}
+                            </h2>
+                            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
+                                {scanResult.status === 'valid' ? 'This product is verified as genuine and has not been scanned before.' :
+                                    scanResult.status === 'used' ? 'Warning: This QR code was previously verified. It may be a duplicate.' :
+                                        'Alert: This token does not exist in our secure registry or has been corrupted.'}
                             </p>
-                            <Button onClick={startScanner} style={{ padding: '1rem 2.5rem' }}>
-                                <Camera size={20} /> Start Scanner
-                            </Button>
-                        </Card>
-                    )}
 
-                    {isScanning && (
-                        <Card>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                                <h3 style={{ fontSize: '1.1rem' }}>Scanning in Progress...</h3>
-                                <Button variant="outline" onClick={() => { scannerRef.current?.clear(); setIsScanning(false); }}>Cancel</Button>
-                            </div>
-                            <div id="reader" style={{ overflow: 'hidden', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}></div>
-                        </Card>
-                    )}
-
-                    {scanResult && (
-                        <VerificationResult result={scanResult} onReset={() => setScanResult(null)} />
-                    )}
-                </div>
-
-                <div>
-                    <Card padding="1.5rem">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                            <History size={20} color="var(--accent)" />
-                            <h3 style={{ fontSize: '1.1rem' }}>Recent Scan Activity</h3>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {history.map(log => (
-                                <div key={log.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
-                                    <div style={{
-                                        width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        backgroundColor: log.result === 'success' ? 'rgba(16, 185, 129, 0.1)' : log.result === 'failure' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                        color: log.result === 'success' ? 'var(--success)' : log.result === 'failure' ? 'var(--danger)' : 'var(--warning)'
-                                    }}>
-                                        {log.result === 'success' ? <ShieldCheck size={16} /> : log.result === 'failure' ? <ShieldAlert size={16} /> : <ShieldQuestion size={16} />}
+                            {scanResult.product && (
+                                <div style={{ textAlign: 'left', backgroundColor: 'white', padding: '1.5rem', borderRadius: ' var(--radius-lg)', marginBottom: '2rem', border: '1px solid var(--border)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                        <Package size={20} color="var(--text-muted)" />
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Product Name</div>
+                                            <div style={{ fontWeight: 600 }}>{scanResult.product.name}</div>
+                                        </div>
                                     </div>
-                                    <div style={{ flex: 1 }}>
-                                        <p style={{ fontSize: '0.85rem', fontWeight: '600' }}>{log.qr_codes?.products?.name || 'Unknown Product'}</p>
-                                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(log.created_at).toLocaleString()}</p>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                                        <Building2 size={20} color="var(--text-muted)" />
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>SKU / Batch</div>
+                                            <div style={{ fontWeight: 600 }}>{scanResult.product.sku}</div>
+                                        </div>
                                     </div>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>{log.result}</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <Clock size={20} color="var(--text-muted)" />
+                                        <div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Scan Timestamp</div>
+                                            <div style={{ fontWeight: 600 }}>{new Date().toLocaleString()}</div>
+                                        </div>
+                                    </div>
                                 </div>
-                            ))}
-                            {history.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-muted)', py: '2rem' }}>No recent activity</p>}
-                        </div>
-                    </Card>
-                </div>
-            </div>
-        </DashboardLayout>
-    );
-}
+                            )}
 
-function VerificationResult({ result, onReset }) {
-    const { status, message, data } = result;
-
-    const colors = {
-        valid: 'var(--success)',
-        invalid: 'var(--danger)',
-        used: 'var(--warning)',
-        error: 'var(--text-muted)'
-    };
-
-    const icons = {
-        valid: <ShieldCheck size={64} />,
-        invalid: <ShieldAlert size={64} />,
-        used: <ShieldQuestion size={64} />,
-        error: <ShieldAlert size={64} />
-    };
-
-    return (
-        <Card style={{ borderTop: `6px solid ${colors[status]}` }}>
-            <div style={{ textAlign: 'center', padding: '1rem' }}>
-                <div style={{ color: colors[status], marginBottom: '1.5rem', display: 'flex', justifyContent: 'center' }}>
-                    {icons[status]}
-                </div>
-                <h2 style={{ fontSize: '1.875rem', color: colors[status], marginBottom: '0.5rem' }}>{message}</h2>
-
-                {data && (
-                    <div style={{ marginTop: '2.5rem', textAlign: 'left', backgroundColor: 'var(--background)', padding: '1.5rem', borderRadius: 'var(--radius-md)' }}>
-                        <h4 style={{ marginBottom: '1rem', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Product Details</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <div>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Product</p>
-                                <p style={{ fontWeight: '600' }}>{data.products.name}</p>
-                            </div>
-                            <div>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Batch ID</p>
-                                <p style={{ fontWeight: '600' }}><code>{data.products.batch_id}</code></p>
-                            </div>
-                            <div>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Vendor</p>
-                                <p style={{ fontWeight: '600' }}>{data.products.vendors.company_name}</p>
-                            </div>
-                            <div>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Scan Status</p>
-                                <p style={{ fontWeight: '600' }}>{data.status.toUpperCase()}</p>
-                            </div>
+                            <Button className="btn-primary" style={{ width: '100%' }} onClick={resetScanner}>
+                                Next Scan
+                            </Button>
                         </div>
                     </div>
                 )}
 
-                <div style={{ marginTop: '2.5rem' }}>
-                    <Button onClick={onReset} style={{ width: '100%' }}>Scan Another Product</Button>
-                </div>
-            </div>
-        </Card>
+                {!scanResult && !loading && (
+                    <div style={{ marginTop: '2rem' }}>
+                        <h3 style={{ fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <History size={18} /> Recent Scans
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {recentScans.map(scan => (
+                                <Card key={scan.id} style={{ padding: '1rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{scan.products?.name || 'Unknown Token'}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(scan.created_at).toLocaleTimeString()}</div>
+                                        </div>
+                                        <Badge type={scan.status === 'valid' ? 'success' : scan.status === 'used' ? 'warning' : 'error'}>
+                                            {scan.status}
+                                        </Badge>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </main>
+        </div>
     );
-}
+};
+
+export default VerifierDashboard;

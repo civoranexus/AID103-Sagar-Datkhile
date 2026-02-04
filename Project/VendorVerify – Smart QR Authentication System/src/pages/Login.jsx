@@ -1,31 +1,47 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { ShieldCheck, Mail, Lock, Loader2 } from 'lucide-react';
 import { Button, Input, Card } from '../components/UI';
-import { ShieldCheck, Lock, Mail } from 'lucide-react';
 
-export default function Login() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+const Login = () => {
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [formData, setFormData] = useState({
+        email: '',
+        password: ''
+    });
 
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setError(null);
+        setError('');
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
+            const { data, error: loginError } = await supabase.auth.signInWithPassword({
+                email: formData.email,
+                password: formData.password,
             });
 
-            if (error) throw error;
-            navigate('/');
+            if (loginError) throw loginError;
+
+            // Role redirection is handled in App.jsx, but we can proactively navigate
+            const { data: userData, error: roleError } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', data.user.id)
+                .single();
+
+            if (roleError) throw roleError;
+
+            const role = userData.role;
+            if (role === 'vendor') navigate('/vendor');
+            else if (role === 'verifier') navigate('/verifier');
+            else if (role === 'admin') navigate('/admin');
+
         } catch (err) {
-            setError(err.message);
+            setError(err.message || 'Invalid login credentials');
         } finally {
             setLoading(false);
         }
@@ -37,73 +53,98 @@ export default function Login() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '1rem',
-            background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
+            backgroundImage: 'radial-gradient(circle at 2px 2px, var(--border) 1px, transparent 0)',
+            backgroundSize: '40px 40px',
+            padding: '1.5rem'
         }}>
-            <Card style={{ maxWidth: '400px', width: '100%' }}>
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <div className="fade-in" style={{ width: '100%', maxWidth: '440px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
                     <div style={{
-                        width: '64px',
-                        height: '64px',
-                        backgroundColor: 'var(--accent)',
+                        background: 'var(--primary)',
+                        width: '56px',
+                        height: '56px',
                         borderRadius: '16px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        margin: '0 auto 1.5rem',
-                        boxShadow: '0 8px 16px rgba(59, 130, 246, 0.3)'
+                        margin: '0 auto 1.25rem',
+                        boxShadow: 'var(--shadow-lg)'
                     }}>
-                        <ShieldCheck size={32} color="white" />
+                        <ShieldCheck color="white" size={32} />
                     </div>
-                    <h1>Welcome Back</h1>
-                    <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>Secure Portal for Vendor & Verification</p>
+                    <h1 className="font-display" style={{ fontSize: '1.875rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>Secure Portal</h1>
+                    <p style={{ color: 'var(--text-muted)' }}>Enter your credentials to access VendorVerify</p>
                 </div>
 
-                {error && (
-                    <div style={{
-                        padding: '0.75rem',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        color: 'var(--danger)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: '0.875rem',
-                        marginBottom: '1.5rem',
-                        border: '1px solid rgba(239, 68, 68, 0.2)'
-                    }}>
-                        {error}
-                    </div>
-                )}
+                <Card style={{ padding: '2.5rem' }}>
+                    {error && (
+                        <div style={{
+                            padding: '0.875rem 1rem',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            color: 'var(--error)',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: '0.875rem',
+                            marginBottom: '1.5rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem'
+                        }}>
+                            <Lock size={16} /> {error}
+                        </div>
+                    )}
 
-                <form onSubmit={handleLogin}>
-                    <Input
-                        label="Email Address"
-                        type="email"
-                        placeholder="name@company.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        icon={<Mail size={18} />}
-                    />
-                    <Input
-                        label="Password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        icon={<Lock size={18} />}
-                    />
+                    <form onSubmit={handleLogin}>
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label className="input-label">Email Address</label>
+                            <div style={{ position: 'relative' }}>
+                                <Mail size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                                <input
+                                    className="input-field"
+                                    type="email"
+                                    placeholder="name@company.com"
+                                    required
+                                    style={{ paddingLeft: '3rem' }}
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                />
+                            </div>
+                        </div>
 
-                    <Button type="submit" style={{ width: '100%', marginTop: '0.5rem' }} disabled={loading}>
-                        {loading ? 'Authenticating...' : 'Sign In'}
-                    </Button>
-                </form>
+                        <div style={{ marginBottom: '2rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                <label className="input-label" style={{ margin: 0 }}>Password</label>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--accent)', cursor: 'pointer', fontWeight: 500 }}>Forgot password?</span>
+                            </div>
+                            <div style={{ position: 'relative' }}>
+                                <Lock size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                                <input
+                                    className="input-field"
+                                    type="password"
+                                    placeholder="••••••••"
+                                    required
+                                    style={{ paddingLeft: '3rem' }}
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                />
+                            </div>
+                        </div>
 
-                <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.9rem' }}>
-                    <p style={{ color: 'var(--text-muted)' }}>
-                        Don't have an account? <Link to="/register" style={{ color: 'var(--accent)', fontWeight: '600' }}>Create one</Link>
-                    </p>
-                </div>
-            </Card>
+                        <Button
+                            className="btn-primary"
+                            style={{ width: '100%', height: '3rem' }}
+                            disabled={loading}
+                        >
+                            {loading ? <Loader2 className="animate-spin" size={20} /> : 'Sign In'}
+                        </Button>
+                    </form>
+                </Card>
+
+                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                    Don't have an account? <Link to="/register" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>Register your business</Link>
+                </p>
+            </div>
         </div>
     );
-}
+};
+
+export default Login;

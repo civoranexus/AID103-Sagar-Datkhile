@@ -1,70 +1,179 @@
-export const Button = ({ children, variant = 'primary', ...props }) => {
-    const styles = {
-        padding: '0.75rem 1.5rem',
-        borderRadius: 'var(--radius-md)',
-        fontWeight: '600',
-        transition: 'all 0.2s ease',
-        fontSize: '0.95rem',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '0.5rem',
-        boxShadow: variant === 'primary' ? 'var(--shadow-md)' : 'none',
-        backgroundColor: variant === 'primary' ? 'var(--accent)' : 'transparent',
-        color: variant === 'primary' ? 'white' : 'var(--text-main)',
-        border: variant === 'outline' ? '1px solid var(--border)' : 'none',
-    };
+import React from 'react';
+import { LogOut, LayoutDashboard, Database, ClipboardList, ShieldAlert, User, Menu, X, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-    const hoverStyles = variant === 'primary' ? { backgroundColor: 'var(--accent-hover)' } : { backgroundColor: 'var(--background)' };
-
+export const Button = ({ children, variant = 'primary', className = '', ...props }) => {
+    const variantClass = `btn-${variant}`;
     return (
-        <button
-            style={styles}
-            onMouseOver={(e) => Object.assign(e.currentTarget.style, hoverStyles)}
-            onMouseOut={(e) => Object.assign(e.currentTarget.style, styles)}
-            {...props}
-        >
+        <button className={`btn ${variantClass} ${className}`} {...props}>
             {children}
         </button>
     );
 };
 
-export const Input = ({ label, ...props }) => (
-    <div style={{ marginBottom: '1.25rem' }}>
-        {label && <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-muted)' }}>{label}</label>}
-        <input
-            style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                border: '1px solid var(--border)',
-                backgroundColor: 'var(--surface)',
-                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-            }}
-            onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'var(--accent)';
-                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-            }}
-            onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--border)';
-                e.currentTarget.style.boxShadow = 'none';
-            }}
-            {...props}
-        />
+export const Input = ({ label, error, ...props }) => (
+    <div className="input-group">
+        {label && <label className="input-label">{label}</label>}
+        <input className={`input-field ${error ? 'border-error' : ''}`} {...props} />
+        {error && <p className="text-error" style={{ fontSize: '0.75rem', marginTop: '0.25rem', color: 'var(--error)' }}>{error}</p>}
     </div>
 );
 
-export const Card = ({ children, padding = '2rem', ...props }) => (
-    <div
-        className="fade-in"
-        style={{
-            background: 'var(--surface)',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-lg)',
-            padding: padding,
-            ...props.style
-        }}
-    >
+export const Card = ({ children, title, className = '', ...props }) => (
+    <div className={`card fade-in ${className}`} {...props}>
+        {title && <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>{title}</h3>}
         {children}
     </div>
 );
+
+export const Badge = ({ children, type = 'info' }) => (
+    <span className={`badge badge-${type}`}>
+        {children}
+    </span>
+);
+
+export const Modal = ({ isOpen, onClose, title, children }) => {
+    if (!isOpen) return null;
+    return (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+            padding: '1.5rem'
+        }} onClick={onClose}>
+            <div
+                className="card shadow-lg fade-in"
+                style={{ width: '100%', maxWidth: '550px', padding: 0, overflow: 'hidden' }}
+                onClick={e => e.stopPropagation()}
+            >
+                <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h2 style={{ fontSize: '1.1rem', margin: 0 }}>{title}</h2>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                        <X size={20} />
+                    </button>
+                </div>
+                <div style={{ padding: '1.5rem' }}>
+                    {children}
+                </div>
+            </div>
+        </div >
+    );
+};
+
+export const DashboardLayout = ({ children, role, navItems }) => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    const [isSidebarOpen, setSidebarOpen] = React.useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        navigate('/login');
+    };
+
+    return (
+        <div className="dashboard-container">
+            {/* Sidebar */}
+            <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+                <div style={{ marginBottom: '3rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{ background: 'var(--accent)', padding: '0.5rem', borderRadius: ' var(--radius-md)' }}>
+                        <ShieldAlert size={24} color="white" />
+                    </div>
+                    <div>
+                        <h2 className="font-display" style={{ fontSize: '1.1rem', letterSpacing: '-0.02em' }}>VendorVerify</h2>
+                        <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', opacity: 0.6 }}>{role} Portal</span>
+                    </div>
+                </div>
+
+                <nav style={{ flex: 1 }}>
+                    {navItems.map((item) => (
+                        <div
+                            key={item.path}
+                            onClick={() => {
+                                navigate(item.path);
+                                setSidebarOpen(false);
+                            }}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                padding: '0.875rem 1rem',
+                                borderRadius: 'var(--radius-md)',
+                                cursor: 'pointer',
+                                marginBottom: '0.5rem',
+                                transition: 'all 0.2s',
+                                backgroundColor: location.pathname === item.path ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                color: location.pathname === item.path ? 'white' : 'rgba(255,255,255,0.6)'
+                            }}
+                        >
+                            <item.icon size={20} />
+                            <span style={{ fontWeight: 500, fontSize: '0.9rem' }}>{item.label}</span>
+                        </div>
+                    ))}
+                </nav>
+
+                <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem' }}>
+                    <div
+                        onClick={() => setShowLogoutConfirm(true)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.875rem 1rem', cursor: 'pointer', color: 'rgba(255,255,255,0.6)' }}
+                    >
+                        <LogOut size={20} />
+                        <span style={{ fontSize: '0.9rem' }}>Sign Out</span>
+                    </div>
+                </div>
+            </aside>
+
+            {/* Main Content */}
+            <main className="main-content">
+                <header className="top-nav">
+                    <div style={{ display: 'none' }}>
+                        {/* Mobile Toggle would go here */}
+                    </div>
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>System Status</span>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} /> Secure Connection
+                            </span>
+                        </div>
+                    </div>
+                </header>
+                <div style={{ paddingTop: '2rem' }}>
+                    {children}
+                </div>
+            </main>
+
+            {/* Logout Confirmation Modal */}
+            <Modal
+                isOpen={showLogoutConfirm}
+                onClose={() => setShowLogoutConfirm(false)}
+                title="Confirm Sign Out"
+            >
+                <div style={{ textAlign: 'center' }}>
+                    <div style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        color: 'var(--error)',
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 1.5rem'
+                    }}>
+                        <LogOut size={24} />
+                    </div>
+                    <h3 style={{ marginBottom: '1rem' }}>You want log out?</h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '2rem' }}>
+                        You will need to enter your credentials again to access your secure dashboard.
+                    </p>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <Button variant="outline" style={{ flex: 1 }} onClick={() => setShowLogoutConfirm(false)}>Cancel</Button>
+                        <Button variant="primary" style={{ flex: 1, backgroundColor: 'var(--error)' }} onClick={handleLogout}>Log Out</Button>
+                    </div>
+                </div>
+            </Modal>
+        </div>
+    );
+};

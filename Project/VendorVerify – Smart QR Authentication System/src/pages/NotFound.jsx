@@ -1,4 +1,11 @@
-export default function NotFound() {
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ShieldAlert, ArrowLeft } from 'lucide-react';
+import { Button } from '../components/UI';
+
+const NotFound = () => {
+    const navigate = useNavigate();
+
     return (
         <div style={{
             minHeight: '100vh',
@@ -9,20 +16,25 @@ export default function NotFound() {
             textAlign: 'center',
             padding: '2rem'
         }}>
-            <h1 style={{ fontSize: '4rem', color: 'var(--accent)', marginBottom: '1rem' }}>404</h1>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Page Not Found</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', maxWidth: '400px' }}>
-                The link might be broken or the page has been moved. Check the URL or return to safety.
-            </p>
-            <a href="/" style={{
-                padding: '0.75rem 2rem',
-                backgroundColor: 'var(--primary)',
-                color: 'white',
-                borderRadius: 'var(--radius-md)',
-                fontWeight: '600'
+            <div style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                color: 'var(--error)',
+                padding: '1.5rem',
+                borderRadius: '50%',
+                marginBottom: '2rem'
             }}>
-                Return Home
-            </a>
+                <ShieldAlert size={64} />
+            </div>
+            <h1 className="font-display" style={{ fontSize: '3rem', marginBottom: '1rem' }}>404</h1>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Unauthorized or Missing Path</h2>
+            <p style={{ color: 'var(--text-muted)', maxWidth: '450px', marginBottom: '2.5rem' }}>
+                The security protocol has restricted access to this resource or the requested page does not exist in our registry.
+            </p>
+            <Button className="btn-primary" onClick={() => navigate('/')}>
+                <ArrowLeft size={18} /> Return to Safety
+            </Button>
         </div>
     );
-}
+};
+
+export default NotFound;

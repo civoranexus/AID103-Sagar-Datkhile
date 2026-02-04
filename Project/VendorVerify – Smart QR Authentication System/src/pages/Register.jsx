@@ -1,51 +1,52 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Button, Input, Card } from '../components/UI';
-import { ShieldCheck, User, Building, Search } from 'lucide-react';
+import { ShieldPlus, User, Mail, Lock, Building, Loader2, Check } from 'lucide-react';
+import { Button, Card } from '../components/UI';
 
-export default function Register() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [role, setRole] = useState('vendor');
-    const [companyName, setCompanyName] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+const Register = () => {
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [formData, setFormData] = useState({
+        email: '',
+        password: '',
+        fullName: '',
+        role: 'vendor' // 'vendor' or 'verifier'
+    });
 
     const handleRegister = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setError(null);
+        setError('');
 
         try {
             // 1. Sign up user
-            const { data: { user }, error: signUpError } = await supabase.auth.signUp({
-                email,
-                password,
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: formData.email,
+                password: formData.password,
             });
 
-            if (signUpError) throw signUpError;
+            if (authError) throw authError;
 
-            if (user) {
-                // 2. Insert into users table
-                const { error: userError } = await supabase
+            if (authData.user) {
+                // 2. Create user profile
+                const { error: profileError } = await supabase
                     .from('users')
-                    .insert([{ id: user.id, email, role }]);
+                    .insert([
+                        {
+                            id: authData.user.id,
+                            email: formData.email,
+                            full_name: formData.fullName,
+                            role: formData.role
+                        },
+                    ]);
 
-                if (userError) throw userError;
+                if (profileError) throw profileError;
 
-                // 3. If vendor, insert into vendors table
-                if (role === 'vendor') {
-                    const { error: vendorError } = await supabase
-                        .from('vendors')
-                        .insert([{ user_id: user.id, company_name: companyName }]);
-
-                    if (vendorError) throw vendorError;
-                }
-
-                alert('Registration successful! Please check your email for verification.');
-                navigate('/login');
+                // Redirect based on role
+                if (formData.role === 'vendor') navigate('/vendor');
+                else navigate('/verifier');
             }
         } catch (err) {
             setError(err.message);
@@ -60,103 +61,166 @@ export default function Register() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '2rem 1rem',
-            background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)'
+            backgroundImage: 'radial-gradient(circle at 2px 2px, var(--border) 1px, transparent 0)',
+            backgroundSize: '40px 40px',
+            padding: '2rem 1.5rem'
         }}>
-            <Card style={{ maxWidth: '450px', width: '100%' }}>
+            <div className="fade-in" style={{ width: '100%', maxWidth: '500px' }}>
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                    <h1>Create Account</h1>
-                    <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>Join the secure authentication network</p>
+                    <div style={{
+                        background: 'var(--accent)',
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 1.25rem',
+                        boxShadow: 'var(--shadow-lg)'
+                    }}>
+                        <ShieldPlus color="white" size={32} />
+                    </div>
+                    <h1 className="font-display" style={{ fontSize: '1.875rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>Create Account</h1>
+                    <p style={{ color: 'var(--text-muted)' }}>Join VendorVerify security network</p>
                 </div>
 
-                {error && (
-                    <div style={{
-                        padding: '0.75rem',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        color: 'var(--danger)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: '0.875rem',
-                        marginBottom: '1.5rem'
-                    }}>
-                        {error}
-                    </div>
-                )}
-
-                <form onSubmit={handleRegister}>
-                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-                        <div
-                            onClick={() => setRole('vendor')}
-                            style={{
-                                flex: 1,
-                                padding: '1rem',
-                                borderRadius: 'var(--radius-md)',
-                                cursor: 'pointer',
-                                textAlign: 'center',
-                                border: `2px solid ${role === 'vendor' ? 'var(--accent)' : 'var(--border)'}`,
-                                backgroundColor: role === 'vendor' ? 'rgba(59, 130, 246, 0.05)' : 'white',
-                                transition: 'all 0.2s ease'
-                            }}
-                        >
-                            <Building size={24} color={role === 'vendor' ? 'var(--accent)' : 'var(--text-muted)'} style={{ marginBottom: '0.5rem' }} />
-                            <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>Vendor</div>
-                        </div>
-                        <div
-                            onClick={() => setRole('verifier')}
-                            style={{
-                                flex: 1,
-                                padding: '1rem',
-                                borderRadius: 'var(--radius-md)',
-                                cursor: 'pointer',
-                                textAlign: 'center',
-                                border: `2px solid ${role === 'verifier' ? 'var(--accent)' : 'var(--border)'}`,
-                                backgroundColor: role === 'verifier' ? 'rgba(59, 130, 246, 0.05)' : 'white',
-                                transition: 'all 0.2s ease'
-                            }}
-                        >
-                            <Search size={24} color={role === 'verifier' ? 'var(--accent)' : 'var(--text-muted)'} style={{ marginBottom: '0.5rem' }} />
-                            <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>Verifier</div>
-                        </div>
-                    </div>
-
-                    <Input
-                        label="Email Address"
-                        type="email"
-                        placeholder="name@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                    />
-                    <Input
-                        label="Password"
-                        type="password"
-                        placeholder="Min 6 characters"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                    />
-
-                    {role === 'vendor' && (
-                        <Input
-                            label="Company Name"
-                            type="text"
-                            placeholder="Your Business Name"
-                            value={companyName}
-                            onChange={(e) => setCompanyName(e.target.value)}
-                            required
-                        />
+                <Card style={{ padding: '2.5rem' }}>
+                    {error && (
+                        <div style={{
+                            padding: '0.875rem 1rem',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            color: 'var(--error)',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: '0.875rem',
+                            marginBottom: '1.5rem'
+                        }}>{error}</div>
                     )}
 
-                    <Button type="submit" style={{ width: '100%', marginTop: '0.5rem' }} disabled={loading}>
-                        {loading ? 'Creating Account...' : 'Continue'}
-                    </Button>
-                </form>
+                    <form onSubmit={handleRegister}>
+                        <div style={{ marginBottom: '1.25rem' }}>
+                            <label className="input-label">Full Name / Entity Name</label>
+                            <div style={{ position: 'relative' }}>
+                                <User size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                                <input
+                                    className="input-field"
+                                    type="text"
+                                    placeholder="John Doe or Acme Corp"
+                                    required
+                                    style={{ paddingLeft: '3rem' }}
+                                    value={formData.fullName}
+                                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                                />
+                            </div>
+                        </div>
 
-                <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.9rem' }}>
-                    <p style={{ color: 'var(--text-muted)' }}>
-                        Already have an account? <Link to="/login" style={{ color: 'var(--accent)', fontWeight: '600' }}>Log In</Link>
-                    </p>
-                </div>
-            </Card>
+                        <div style={{ marginBottom: '1.25rem' }}>
+                            <label className="input-label">Email Address</label>
+                            <div style={{ position: 'relative' }}>
+                                <Mail size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                                <input
+                                    className="input-field"
+                                    type="email"
+                                    placeholder="name@company.com"
+                                    required
+                                    style={{ paddingLeft: '3rem' }}
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <label className="input-label">Password</label>
+                            <div style={{ position: 'relative' }}>
+                                <Lock size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                                <input
+                                    className="input-field"
+                                    type="password"
+                                    placeholder="Min. 6 characters"
+                                    required
+                                    minLength={6}
+                                    style={{ paddingLeft: '3rem' }}
+                                    value={formData.password}
+                                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ marginBottom: '2rem' }}>
+                            <label className="input-label">Select Your Role</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div
+                                    onClick={() => setFormData({ ...formData, role: 'vendor' })}
+                                    style={{
+                                        padding: '1rem',
+                                        borderRadius: 'var(--radius-md)',
+                                        border: `2px solid ${formData.role === 'vendor' ? 'var(--accent)' : 'var(--border)'}`,
+                                        backgroundColor: formData.role === 'vendor' ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
+                                        cursor: 'pointer',
+                                        textAlign: 'center',
+                                        position: 'relative'
+                                    }}
+                                >
+                                    {formData.role === 'vendor' && <Check size={14} style={{ position: 'absolute', top: 8, right: 8, color: 'var(--accent)' }} />}
+                                    <Building size={24} style={{ marginBottom: '0.5rem', color: formData.role === 'vendor' ? 'var(--accent)' : 'var(--text-muted)' }} />
+                                    <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Vendor</div>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Issue QR Codes</div>
+                                </div>
+                                <div
+                                    onClick={() => setFormData({ ...formData, role: 'verifier' })}
+                                    style={{
+                                        padding: '1rem',
+                                        borderRadius: 'var(--radius-md)',
+                                        border: `2px solid ${formData.role === 'verifier' ? 'var(--accent)' : 'var(--border)'}`,
+                                        backgroundColor: formData.role === 'verifier' ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
+                                        cursor: 'pointer',
+                                        textAlign: 'center',
+                                        position: 'relative'
+                                    }}
+                                >
+                                    {formData.role === 'verifier' && <Check size={14} style={{ position: 'absolute', top: 8, right: 8, color: 'var(--accent)' }} />}
+                                    <ShieldCheck size={24} style={{ marginBottom: '0.5rem', color: formData.role === 'verifier' ? 'var(--accent)' : 'var(--text-muted)' }} />
+                                    <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>Verifier</div>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Scan & Verify</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <Button
+                            className="btn-accent"
+                            style={{ width: '100%', height: '3rem' }}
+                            disabled={loading}
+                        >
+                            {loading ? <Loader2 className="animate-spin" size={20} /> : 'Create Account'}
+                        </Button>
+                    </form>
+                </Card>
+
+                <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                    Already have an account? <Link to="/login" style={{ color: 'var(--accent)', fontWeight: 600, textDecoration: 'none' }}>Sign in here</Link>
+                </p>
+            </div>
         </div>
     );
-}
+};
+
+// Re-using ShieldCheck from lucide (already imported in Login, but let's make sure it's here)
+const ShieldCheck = ({ size, color, style }) => (
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={style}
+    >
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+        <path d="m9 12 2 2 4-4" />
+    </svg>
+);
+
+export default Register;
