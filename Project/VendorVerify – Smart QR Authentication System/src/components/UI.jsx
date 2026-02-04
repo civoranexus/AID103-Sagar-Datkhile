@@ -177,6 +177,22 @@ export const DashboardLayout = ({ children, role, navItems }) => {
     const { addToast } = useToast();
     const [isSidebarOpen, setSidebarOpen] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [userName, setUserName] = useState('');
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data } = await supabase
+                    .from('users')
+                    .select('full_name')
+                    .eq('id', user.id)
+                    .single();
+                if (data) setUserName(data.full_name);
+            }
+        };
+        fetchUser();
+    }, []);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -239,14 +255,23 @@ export const DashboardLayout = ({ children, role, navItems }) => {
             {/* Main Content */}
             <main className="main-content">
                 <header className="top-nav">
-                    <div style={{ display: 'none' }}>
-                    </div>
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>System Status</span>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} /> Secure Connection
-                            </span>
+                            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>{userName || 'Personalizing...'}</span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{role} Account</span>
+                        </div>
+                        <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '10px',
+                            background: 'var(--primary)',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '1px solid rgba(255,255,255,0.1)'
+                        }}>
+                            <User size={18} />
                         </div>
                     </div>
                 </header>

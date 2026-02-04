@@ -35,10 +35,10 @@ const Register = () => {
             if (authError) throw authError;
 
             if (authData.user) {
-                // 2. Create user profile
+                // 2. Create user profile (Upsert to handle potential retries)
                 const { error: profileError } = await supabase
                     .from('users')
-                    .insert([
+                    .upsert([
                         {
                             id: authData.user.id,
                             email: formData.email,
@@ -49,17 +49,26 @@ const Register = () => {
 
                 if (profileError) throw profileError;
 
-                // 3. If vendor, also create vendor profile
+                // 3. Create role-specific profiles
                 if (formData.role === 'vendor') {
                     const { error: vendorError } = await supabase
                         .from('vendors')
-                        .insert([
+                        .upsert([
                             {
                                 user_id: authData.user.id,
                                 company_name: formData.fullName
                             }
                         ]);
                     if (vendorError) throw vendorError;
+                } else if (formData.role === 'verifier') {
+                    // Note: Use 'verifiers' table if it exists, otherwise skip
+                    // The error "relation verifiers does not exist" suggests the code is trying to find it
+                    // I will ensure we only use valid tables from our schema
+                    const { error: verifierError } = await supabase
+                        .from('users') // Staying synced with 'users'
+                        .update({ full_name: formData.fullName })
+                        .eq('id', authData.user.id);
+                    if (verifierError) throw verifierError;
                 }
 
                 addToast('Account created successfully! Welcome to the network.', 'success');
@@ -107,13 +116,13 @@ const Register = () => {
                 <Card style={{ padding: '2.5rem' }}>
                     <form onSubmit={handleRegister}>
                         <div style={{ marginBottom: '1.25rem' }}>
-                            <label className="input-label">Full Name / Entity Name</label>
+                            <label className="input-label">Name</label>
                             <div style={{ position: 'relative' }}>
                                 <User size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                                 <input
                                     className="input-field"
                                     type="text"
-                                    placeholder="John Doe or Acme Corp"
+                                    placeholder={formData.role === 'vendor' ? "Company Name" : "Your Full Name"}
                                     required
                                     style={{ paddingLeft: '3rem' }}
                                     value={formData.fullName}
