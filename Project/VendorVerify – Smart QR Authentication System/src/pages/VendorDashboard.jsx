@@ -76,35 +76,26 @@ const VendorDashboard = () => {
 
             if (!vendor) throw new Error('Vendor profile not found');
 
-            // 2. Create product record
-            const { data: product, error: productError } = await supabase
-                .from('products')
-                .insert([{
-                    name: newProduct.name,
-                    sku: newProduct.sku,
-                    batch_id: newProduct.sku, // Using sku as batch_id for now
-                    description: newProduct.description,
-                    vendor_id: vendor.id
-                }])
-                .select()
-                .single();
-
-            if (productError) throw productError;
-
-            // 3. Call secure backend API to generate QR
+            // 2. Create product and QR via backend API
             const { data: { session } } = await supabase.auth.getSession();
 
-            const apiResponse = await fetch('/api/qr/generate', {
+            const apiResponse = await fetch('/api/vendor/qr/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session?.access_token}`
                 },
                 body: JSON.stringify({
-                    product_id: product.id,
-                    vendor_id: vendor.id
+                    product_name: newProduct.name,
+                    serial_number: newProduct.sku, // Raw serial number from form
+                    description: newProduct.description,
                 })
             });
+
+            if (!apiResponse.ok) {
+                const errorText = await apiResponse.text();
+                throw new Error(errorText || `Server error: ${apiResponse.status}`);
+            }
 
             const qrData = await apiResponse.json();
 
@@ -117,11 +108,12 @@ const VendorDashboard = () => {
 
                 // Show the generated QR immediately
                 setSelectedQR({
-                    ...product,
-                    qrImage: qrData.qrImage
+                    name: newProduct.name,
+                    sku: newProduct.sku,
+                    qrImage: qrData.qr_image
                 });
             } else {
-                throw new Error(qrData.error || 'Failed to generate QR');
+                throw new Error(qrData.error || qrData.message || 'Failed to generate QR');
             }
         } catch (error) {
             console.error('Operation failed:', error);
@@ -202,7 +194,7 @@ const VendorDashboard = () => {
                                     {products.slice(0, 5).map(product => (
                                         <tr key={product.id}>
                                             <td style={{ fontWeight: 500 }}>{product.name}</td>
-                                            <td><code>{product.sku}</code></td>
+                                            <td><code>{product.serial_number}</code></td>
                                             <td><Badge type="success">Active</Badge></td>
                                             <td>
                                                 <Button

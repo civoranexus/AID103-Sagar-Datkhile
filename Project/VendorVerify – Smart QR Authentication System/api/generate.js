@@ -1,9 +1,10 @@
 // Vercel Serverless Function: POST /api/generate
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
 const supabase = createClient(
-    process.env.SUPABASE_URL,
+    process.env.VITE_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 

@@ -26,7 +26,7 @@ CREATE TABLE products (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   vendor_id UUID REFERENCES vendors(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  batch_id TEXT NOT NULL,
+  serial_number TEXT UNIQUE NOT NULL,
   description TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -43,7 +43,9 @@ CREATE TABLE qr_codes (
 CREATE TABLE audit_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   qr_id UUID REFERENCES qr_codes(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES products(id) ON DELETE SET NULL,
   verifier_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  verifier_name TEXT,
   vendor_id UUID REFERENCES vendors(id) ON DELETE CASCADE,
   ip_address TEXT,
   location TEXT,

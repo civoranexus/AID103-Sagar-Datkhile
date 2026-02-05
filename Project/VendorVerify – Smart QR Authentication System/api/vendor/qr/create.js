@@ -13,7 +13,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { product_id, vendor_id } = req.body;
+    const { product_name, serial_number, description, vendor_id } = req.body;
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        // Verify user and role
+        // 1. Validate vendor authentication and role
         const token = authHeader.replace('Bearer ', '');
         const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
@@ -29,6 +29,7 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'Invalid session' });
         }
 
+        // Check if user is the vendor or admin
         const { data: userData } = await supabase
             .from('users')
             .select('role')
@@ -39,47 +40,58 @@ export default async function handler(req, res) {
             return res.status(403).json({ error: 'Unauthorized: Vendor or Admin access required' });
         }
 
-        if (!product_id || !vendor_id) {
-            return res.status(400).json({ error: 'product_id and vendor_id are required' });
+        // 2. Insert a new row into the products table
+        const { data: product, error: productError } = await supabase
+            .from('products')
+            .insert([{
+                name: product_name,
+                serial_number: serial_number,
+                description: description,
+                vendor_id: vendor_id
+            }])
+            .select()
+            .single();
+
+        if (productError) {
+            console.error('Product insertion error:', productError);
+            return res.status(500).json({ error: 'Failed to create product. Serial number might be duplicate.' });
         }
 
-        // 1. Generate a cryptographically secure random UUID token
-        const rawToken = crypto.randomUUID();
+        // 3. Generate a SHA-256 hash of the serial_number
+        const hashedToken = crypto.createHash('sha256').update(serial_number).digest('hex');
 
-        // 2. Hash the raw token using SHA-256
-        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
-
-        // 3. Insert the hashed token into the qr_codes table
-        const { error: dbError } = await supabase
+        // 4. Insert a new row into the qr_codes table
+        const { error: qrError } = await supabase
             .from('qr_codes')
             .insert([{
-                product_id,
-                vendor_id,
                 hashed_token: hashedToken,
+                product_id: product.id,
+                vendor_id: vendor_id,
                 status: 'active'
             }]);
 
-        if (dbError) {
-            console.error('Database insertion error:', dbError);
+        if (qrError) {
+            console.error('QR insertion error:', qrError);
+            // Cleanup product if QR fails? For now just error out
             return res.status(500).json({ error: 'Failed to record QR code' });
         }
 
-        // 4. Generate a QR code image from the raw (unhashed) token
-        const qrImage = await QRCode.toDataURL(rawToken, {
+        // 5. Generate a QR code image using the RAW serial number
+        const qrImage = await QRCode.toDataURL(serial_number, {
             errorCorrectionLevel: 'H',
             margin: 2,
             width: 400
         });
 
-        // 5. Return the QR image as a base64 data URL
+        // 6. Return the QR image
         return res.status(200).json({
             success: true,
-            qrImage: qrImage,
-            message: 'QR code generated successfully'
+            qr_image: qrImage,
+            message: 'Product and QR code created successfully'
         });
 
     } catch (error) {
-        console.error('QR Generation error:', error);
+        console.error('QR Creation error:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
 }
