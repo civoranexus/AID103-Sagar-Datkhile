@@ -8,15 +8,13 @@ CREATE TABLE users (
 );
 
 CREATE TABLE vendors (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   company_name TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 CREATE TABLE verifiers (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   full_name TEXT,
   employee_id TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -24,7 +22,7 @@ CREATE TABLE verifiers (
 
 CREATE TABLE products (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  vendor_id UUID REFERENCES vendors(id) ON DELETE CASCADE,
+  vendor_id UUID REFERENCES vendors(id) ON DELETE CASCADE, -- References vendor (user) ID
   name TEXT NOT NULL,
   serial_number TEXT UNIQUE NOT NULL,
   description TEXT,
@@ -83,18 +81,21 @@ ALTER TABLE security_alerts ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view own profile" ON users FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can insert own profile" ON users FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Vendors: Vendors can view/edit their own profiles. Allow insert during registration.
-CREATE POLICY "Vendors can view own company" ON vendors FOR SELECT USING (user_id = auth.uid());
-CREATE POLICY "Vendors can update own company" ON vendors FOR UPDATE USING (user_id = auth.uid());
-CREATE POLICY "Vendors can insert own company" ON vendors FOR INSERT WITH CHECK (user_id = auth.uid());
+-- Vendors: Vendors can view/edit their own profiles.
+CREATE POLICY "Vendors can view own company" ON vendors FOR SELECT USING (id = auth.uid());
+CREATE POLICY "Verifiers and Admins can view all vendors" ON vendors FOR SELECT USING (
+  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('verifier', 'admin'))
+);
+CREATE POLICY "Vendors can update own company" ON vendors FOR UPDATE USING (id = auth.uid());
+CREATE POLICY "Vendors can insert own company" ON vendors FOR INSERT WITH CHECK (id = auth.uid());
 
 -- Verifiers: Verifiers can view/edit their own profiles.
-CREATE POLICY "Verifiers can view own profile" ON verifiers FOR SELECT USING (user_id = auth.uid());
-CREATE POLICY "Verifiers can insert own profile" ON verifiers FOR INSERT WITH CHECK (user_id = auth.uid());
+CREATE POLICY "Verifiers can view own profile" ON verifiers FOR SELECT USING (id = auth.uid());
+CREATE POLICY "Verifiers can insert own profile" ON verifiers FOR INSERT WITH CHECK (id = auth.uid());
 
 -- Products: Vendors can manage their own products. Verifiers can view products.
 CREATE POLICY "Vendors can manage own products" ON products FOR ALL USING (
-  EXISTS (SELECT 1 FROM vendors WHERE vendors.id = products.vendor_id AND vendors.user_id = auth.uid())
+  vendor_id = auth.uid()
 );
 CREATE POLICY "Verifiers can view all products" ON products FOR SELECT USING (
   EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('verifier', 'admin'))
@@ -102,11 +103,7 @@ CREATE POLICY "Verifiers can view all products" ON products FOR SELECT USING (
 
 -- QR Codes: Vendors can manage their own QR codes. Public can't read, but verifiers can search.
 CREATE POLICY "Vendors can manage own QR codes" ON qr_codes FOR ALL USING (
-  EXISTS (
-    SELECT 1 FROM products 
-    JOIN vendors ON products.vendor_id = vendors.id 
-    WHERE products.id = qr_codes.product_id AND vendors.user_id = auth.uid()
-  )
+  vendor_id = auth.uid()
 );
 CREATE POLICY "Verifiers can view QR codes" ON qr_codes FOR SELECT USING (
   EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('verifier', 'admin'))
@@ -114,7 +111,7 @@ CREATE POLICY "Verifiers can view QR codes" ON qr_codes FOR SELECT USING (
 
 -- Audit Logs: Vendors can see logs for their products. Verifiers can see their own scans.
 CREATE POLICY "Vendors can view own QR logs" ON audit_logs FOR SELECT USING (
-  vendor_id IN (SELECT id FROM vendors WHERE user_id = auth.uid())
+  vendor_id = auth.uid()
 );
 CREATE POLICY "Verifiers can view own scan history" ON audit_logs FOR SELECT USING (
   verifier_id = auth.uid()

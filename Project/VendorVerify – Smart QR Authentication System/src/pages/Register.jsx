@@ -55,7 +55,7 @@ const Register = () => {
                         .from('vendors')
                         .upsert([
                             {
-                                user_id: authData.user.id,
+                                id: authData.user.id,
                                 company_name: formData.fullName
                             }
                         ]);
@@ -66,7 +66,7 @@ const Register = () => {
                         .from('verifiers')
                         .insert([
                             {
-                                user_id: authData.user.id,
+                                id: authData.user.id,
                                 full_name: formData.fullName,
                                 employee_id: `EMP-${Math.floor(1000 + Math.random() * 9000)}` // Mock employee ID
                             }

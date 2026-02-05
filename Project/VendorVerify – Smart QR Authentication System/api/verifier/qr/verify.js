@@ -64,6 +64,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
             status: 'valid',
             product_name: qr.products?.name,
+            product_serial_number: scanned_serial_number,
             vendor_name: qr.vendors?.company_name
         });
 

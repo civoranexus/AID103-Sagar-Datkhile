@@ -32,6 +32,7 @@ const VerifierDashboard = () => {
     const [recentScans, setRecentScans] = useState([]);
     const [stats, setStats] = useState({ total: 0, valid: 0, failed: 0 });
     const [verifierName, setVerifierName] = useState('');
+    const [selectedScan, setSelectedScan] = useState(null);
 
     useEffect(() => {
         fetchInitialData();
@@ -86,7 +87,7 @@ const VerifierDashboard = () => {
             .select(`
                 *,
                 qr_codes (
-                    products (name)
+                    products (name, serial_number, description)
                 ),
                 vendors (company_name)
             `)
@@ -161,6 +162,7 @@ const VerifierDashboard = () => {
                     status: 'valid',
                     product: {
                         name: result.product_name,
+                        serial_number: result.product_serial_number,
                         vendors: { company_name: result.vendor_name }
                     },
                     timestamp: new Date().toISOString()
@@ -253,12 +255,13 @@ const VerifierDashboard = () => {
                 <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) 350px', gap: '2rem' }}>
                     {/* Main Content Area: Scan History Table */}
                     <div className="grid" style={{ gridTemplateColumns: '1fr' }}>
-                        <Card title="Recent Verification Registry" style={{ padding: 0, overflow: 'hidden' }}>
-                            <div className="table-container" style={{ border: 'none' }}>
+                        <Card style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                            <h3 style={{ padding: '1.5rem 1.5rem 0', fontSize: '1.1rem', margin: 0 }}>Recent Verification Registry</h3>
+                            <div className="table-container" style={{ border: 'none', marginTop: '1rem' }}>
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>Product Name</th>
+                                            <th style={{ paddingLeft: '1.5rem' }}>Product Name</th>
                                             <th>Vendor</th>
                                             <th>Status</th>
                                             <th>Scanned At</th>
@@ -266,16 +269,54 @@ const VerifierDashboard = () => {
                                     </thead>
                                     <tbody>
                                         {recentScans.map(scan => (
-                                            <tr key={scan.id}>
-                                                <td style={{ fontWeight: 600 }}>{scan.qr_codes?.products?.name || 'Unknown Item'}</td>
-                                                <td>{scan.vendors?.company_name || 'Generic Vendor'}</td>
+                                            <tr key={scan.id} style={{ transition: 'background-color 0.2s' }} className="hover:bg-slate-50">
+                                                <td>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingLeft: '0.5rem' }}>
+                                                        <div style={{ background: 'var(--background)', padding: '0.5rem', borderRadius: '8px' }}>
+                                                            <Package size={16} color="var(--text-muted)" />
+                                                        </div>
+                                                        <div>
+                                                            <div
+                                                                style={{
+                                                                    fontWeight: 600,
+                                                                    fontSize: '0.9rem',
+                                                                    cursor: 'pointer',
+                                                                    color: 'black',
+                                                                    
+                                                                }}
+                                                                onClick={() => setSelectedScan(scan)}
+                                                            >
+                                                                {scan.qr_codes?.products?.name || 'Unknown Item'}
+                                                            </div>
+                                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SN: {scan.qr_codes?.products?.serial_number || 'N/A'}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                        <Building2 size={14} color="var(--primary)" />
+                                                        <span style={{ fontWeight: 600 }}>
+                                                            {scan.vendors?.company_name || 'Authentic Vendor'}
+                                                        </span>
+                                                    </div>
+                                                </td>
                                                 <td>
                                                     <Badge type={scan.result === 'valid' ? 'success' : scan.result === 'used' ? 'warning' : 'error'}>
-                                                        {scan.result}
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                            {scan.result === 'valid' && <CheckCircle2 size={12} />}
+                                                            {scan.result === 'used' && <AlertTriangle size={12} />}
+                                                            {scan.result === 'invalid' && <XCircle size={12} />}
+                                                            {scan.result.toUpperCase()}
+                                                        </div>
                                                     </Badge>
                                                 </td>
-                                                <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                                                    {new Date(scan.created_at).toLocaleString()}
+                                                <td>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                                        <Clock size={14} />
+                                                        {new Date(scan.created_at).toLocaleDateString()}
+                                                        <span style={{ opacity: 0.5 }}>|</span>
+                                                        {new Date(scan.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -336,8 +377,8 @@ const VerifierDashboard = () => {
                                         {scanResult.product && (
                                             <>
                                                 <div>
-                                                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Batch ID</label>
-                                                    <div style={{ fontSize: '0.875rem' }}>{scanResult.product.batch_id}</div>
+                                                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Serial Number</label>
+                                                    <div style={{ fontSize: '0.875rem', fontFamily: 'monospace' }}>{scanResult.product.serial_number}</div>
                                                 </div>
                                                 <div>
                                                     <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vendor</label>
@@ -363,6 +404,57 @@ const VerifierDashboard = () => {
                     </div>
                 </div>
             </div>
+            {/* Product Details Modal for Recent Scans */}
+            <Modal isOpen={!!selectedScan} onClose={() => setSelectedScan(null)} title="Verified Product Details">
+                {selectedScan && (
+                    <div className="fade-in">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div style={{ textAlign: 'center', paddingBottom: '1rem', borderBottom: '1px solid var(--border)' }}>
+                                <Badge type={selectedScan.result === 'valid' ? 'success' : selectedScan.result === 'used' ? 'warning' : 'error'}>
+                                    Verification: {selectedScan.result.toUpperCase()}
+                                </Badge>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Product Name</label>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{selectedScan.qr_codes?.products?.name || 'Unknown Product'}</div>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Original Vendor</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Building2 size={16} color="var(--primary)" />
+                                    <div style={{ fontWeight: 500 }}>{selectedScan.vendors?.company_name || 'Authentic Vendor'}</div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Serial Number</label>
+                                <div style={{ background: 'var(--background)', padding: '0.75rem', borderRadius: ' var(--radius-md)', fontFamily: 'monospace', fontSize: '1rem', border: '1px solid var(--border)', display: 'inline-block' }}>
+                                    {selectedScan.qr_codes?.products?.serial_number || 'N/A'}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Registry Description</label>
+                                <div style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: '1.5', background: 'rgba(59, 130, 246, 0.03)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
+                                    {selectedScan.qr_codes?.products?.description || 'No detailed description found in the secure registry for this item.'}
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                <div style={{ textAlign: 'right', flex: 1 }}>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Scan Timestamp</div>
+                                    <div style={{ fontSize: '0.8rem', fontWeight: 500 }}>{new Date(selectedScan.created_at).toLocaleString()}</div>
+                                </div>
+                                <Button className="btn-primary" onClick={() => setSelectedScan(null)}>
+                                    Done
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </DashboardLayout>
     );
 };

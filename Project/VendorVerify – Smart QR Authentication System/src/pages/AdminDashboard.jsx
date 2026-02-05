@@ -37,7 +37,7 @@ const AdminDashboard = () => {
         // Fetch logs with details
         const { data: logsData } = await supabase
             .from('audit_logs')
-            .select('*, products(name), users:verifier_id(full_name)')
+            .select('*, products(name), users:verifier_id(full_name), vendors(company_name)')
             .order('created_at', { ascending: false })
             .limit(15);
 
@@ -110,6 +110,7 @@ const AdminDashboard = () => {
                                     <tr>
                                         <th>Timestamp</th>
                                         <th>Product</th>
+                                        <th>Vendor</th>
                                         <th>Verifier</th>
                                         <th>Result</th>
                                         <th>Metadata</th>
@@ -124,12 +125,18 @@ const AdminDashboard = () => {
                                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{new Date(log.created_at).toLocaleTimeString()}</div>
                                             </td>
                                             <td style={{ fontWeight: 600 }}>{log.products?.name || 'Unknown'}</td>
-                                            <td>{log.users?.full_name || 'System Operator'}</td>
                                             <td>
-                                                <Badge type={log.status === 'valid' ? 'success' : log.status === 'used' ? 'warning' : 'error'}>
-                                                    {log.status === 'valid' ? <CheckCircle2 size={12} style={{ marginRight: 4 }} /> :
-                                                        log.status === 'used' ? <AlertTriangle size={12} style={{ marginRight: 4 }} /> : <XCircle size={12} style={{ marginRight: 4 }} />}
-                                                    {log.status}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <Building2 size={14} color="var(--primary)" />
+                                                    <span style={{ fontWeight: 500 }}>{log.vendors?.company_name || 'Generic Vendor'}</span>
+                                                </div>
+                                            </td>
+                                            <td>{log.users?.full_name || log.verifier_name || 'System Operator'}</td>
+                                            <td>
+                                                <Badge type={log.result === 'valid' ? 'success' : log.result === 'used' ? 'warning' : 'error'}>
+                                                    {log.result === 'valid' ? <CheckCircle2 size={12} style={{ marginRight: 4 }} /> :
+                                                        log.result === 'used' ? <AlertTriangle size={12} style={{ marginRight: 4 }} /> : <XCircle size={12} style={{ marginRight: 4 }} />}
+                                                    {log.result?.toUpperCase()}
                                                 </Badge>
                                             </td>
                                             <td>

@@ -11,10 +11,11 @@ import {
     Copy,
     Download,
     ExternalLink,
-    Clock
+    Clock,
+    Building2
 } from 'lucide-react';
 import { DashboardLayout, Button, Card, Badge, Modal, useToast } from '../components/UI';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 
 const VendorDashboard = () => {
     const { addToast } = useToast();
@@ -23,7 +24,10 @@ const VendorDashboard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [selectedQR, setSelectedQR] = useState(null);
+    const [selectedProductDetails, setSelectedProductDetails] = useState(null);
+    const [vendorName, setVendorName] = useState('');
     const [newProduct, setNewProduct] = useState({ name: '', sku: '', description: '' });
+    const qrRef = React.useRef(null);
 
     useEffect(() => {
         fetchData();
@@ -33,26 +37,23 @@ const VendorDashboard = () => {
         setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
 
-        // 1. Get the internal vendor record id
-        const { data: vendor } = await supabase
-            .from('vendors')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
+        if (user) {
+            // Fetch Vendor name
+            const { data: vInfo } = await supabase.from('vendors').select('company_name').eq('id', user.id).single();
+            if (vInfo) setVendorName(vInfo.company_name);
 
-        if (vendor) {
-            // Fetch products
+            // Fetch products using user.id as vendor_id
             const { data: productsData } = await supabase
                 .from('products')
                 .select('*')
-                .eq('vendor_id', vendor.id)
+                .eq('vendor_id', user.id)
                 .order('created_at', { ascending: false });
 
             // Fetch scan history for vendor's products
             const { data: historyData } = await supabase
                 .from('audit_logs')
-                .select('*, products(name, sku)')
-                .eq('vendor_id', vendor.id)
+                .select('*, products(name, serial_number)')
+                .eq('vendor_id', user.id)
                 .order('created_at', { ascending: false })
                 .limit(10);
 
@@ -65,19 +66,10 @@ const VendorDashboard = () => {
     const handleCreateProduct = async (e) => {
         e.preventDefault();
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-
-            // 1. Get vendor profile for current user
-            const { data: vendor } = await supabase
-                .from('vendors')
-                .select('id')
-                .eq('user_id', user.id)
-                .single();
-
-            if (!vendor) throw new Error('Vendor profile not found');
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('Not authenticated');
 
             // 2. Create product and QR via backend API
-            const { data: { session } } = await supabase.auth.getSession();
 
             const apiResponse = await fetch('/api/vendor/qr/create', {
                 method: 'POST',
@@ -89,6 +81,7 @@ const VendorDashboard = () => {
                     product_name: newProduct.name,
                     serial_number: newProduct.sku, // Raw serial number from form
                     description: newProduct.description,
+                    vendor_id: session?.user?.id
                 })
             });
 
@@ -109,7 +102,7 @@ const VendorDashboard = () => {
                 // Show the generated QR immediately
                 setSelectedQR({
                     name: newProduct.name,
-                    sku: newProduct.sku,
+                    serial_number: newProduct.sku,
                     qrImage: qrData.qr_image
                 });
             } else {
@@ -185,7 +178,7 @@ const VendorDashboard = () => {
                                 <thead>
                                     <tr>
                                         <th>Product</th>
-                                        <th>SKU</th>
+                                        <th>Description</th>
                                         <th>Status</th>
                                         <th>QR</th>
                                     </tr>
@@ -193,8 +186,26 @@ const VendorDashboard = () => {
                                 <tbody>
                                     {products.slice(0, 5).map(product => (
                                         <tr key={product.id}>
-                                            <td style={{ fontWeight: 500 }}>{product.name}</td>
-                                            <td><code>{product.serial_number}</code></td>
+                                            <td>
+                                                <button
+                                                    onClick={() => setSelectedProductDetails(product)}
+                                                    style={{
+                                                        background: 'none',
+                                                        border: 'none',
+                                                        padding: 0,
+                                                        fontWeight: 500,
+                                                        color: 'var(--accent)',
+                                                        cursor: 'pointer',
+                                                        textAlign: 'left',
+                                                        textDecoration: 'underline'
+                                                    }}
+                                                >
+                                                    {product.name}
+                                                </button>
+                                            </td>
+                                            <td style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                                                {product.description || 'No description'}
+                                            </td>
                                             <td><Badge type="success">Active</Badge></td>
                                             <td>
                                                 <Button
@@ -290,38 +301,80 @@ const VendorDashboard = () => {
             <Modal isOpen={!!selectedQR} onClose={() => setSelectedQR(null)} title="Product QR Code">
                 {selectedQR && (
                     <div style={{ textAlign: 'center' }}>
-                        <div style={{ background: 'white', padding: '2rem', borderRadius: ' var(--radius-lg)', border: '1px solid var(--border)', display: 'inline-block', marginBottom: '1.5rem' }}>
-                            {selectedQR.qrImage ? (
-                                <img src={selectedQR.qrImage} alt="Product QR" style={{ width: 200, height: 200 }} />
-                            ) : (
-                                <div style={{ width: 200, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                                    QR Not Available for Re-view
-                                </div>
-                            )}
+                        <div style={{ background: 'white', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', display: 'inline-block', marginBottom: '1.5rem' }}>
+                            <QRCodeCanvas
+                                id="product-qr-canvas"
+                                value={selectedQR.serial_number || selectedQR.sku || ''}
+                                size={200}
+                                level="H"
+                                includeMargin={true}
+                            />
                         </div>
                         <h3 style={{ marginBottom: '0.5rem' }}>{selectedQR.name}</h3>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>SKU: {selectedQR.sku}</p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                            Serial: <code>{selectedQR.serial_number || selectedQR.sku}</code>
+                        </p>
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
-                            {selectedQR.qrImage && (
-                                <Button variant="outline" style={{ flex: 1 }} onClick={() => {
+                            <Button variant="outline" style={{ flex: 1 }} onClick={() => {
+                                const canvas = document.getElementById('product-qr-canvas');
+                                if (canvas) {
                                     const link = document.createElement('a');
-                                    link.href = selectedQR.qrImage;
-                                    link.download = `QR-${selectedQR.sku}.png`;
+                                    link.href = canvas.toDataURL('image/png');
+                                    link.download = `QR-${selectedQR.serial_number || selectedQR.sku}.png`;
                                     link.click();
-                                }}>
-                                    <Download size={18} /> Download
-                                </Button>
-                            )}
-                            <Button className="btn-accent" style={{ flex: 1 }} onClick={() => {
-                                if (selectedQR.qrImage) {
-                                    addToast('Image available in download', 'success');
-                                } else {
-                                    addToast('Reference: ' + selectedQR.id, 'info');
+                                    addToast('QR Code downloaded successfully', 'success');
                                 }
                             }}>
-                                <Copy size={18} /> Copy Info
+                                <Download size={18} /> Download
                             </Button>
+                            <Button className="btn-accent" style={{ flex: 1 }} onClick={() => {
+                                navigator.clipboard.writeText(selectedQR.serial_number || selectedQR.sku);
+                                addToast('Serial number copied to clipboard', 'success');
+                            }}>
+                                <Copy size={18} /> Copy Serial
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
+            {/* Product Details Modal */}
+            <Modal isOpen={!!selectedProductDetails} onClose={() => setSelectedProductDetails(null)} title="Product Information">
+                {selectedProductDetails && (
+                    <div className="fade-in">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Product Name</label>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>{selectedProductDetails.name}</div>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Vendor / Manufacturer</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <Building2 size={16} color="var(--accent)" />
+                                    <div style={{ fontWeight: 500 }}>{vendorName || 'Authentic Vendor'}</div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Secure Serial Number</label>
+                                <div style={{ background: 'var(--background)', padding: '0.75rem', borderRadius: ' var(--radius-md)', fontFamily: 'monospace', fontSize: '1rem', border: '1px solid var(--border)', display: 'inline-block' }}>
+                                    {selectedProductDetails.serial_number}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.25rem' }}>Product Description</label>
+                                <div style={{ fontSize: '0.9rem', color: 'var(--text)', lineHeight: '1.5', background: 'rgba(59, 130, 246, 0.03)', padding: '1rem', borderRadius: 'var(--radius-md)' }}>
+                                    {selectedProductDetails.description || 'No detailed description provided for this product record.'}
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
+                                <Button className="btn-primary" style={{ width: '100%' }} onClick={() => setSelectedProductDetails(null)}>
+                                    Close Details
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 )}
