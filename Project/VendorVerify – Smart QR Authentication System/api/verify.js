@@ -19,9 +19,8 @@ export default async function handler(req, res) {
     }
 
     try {
-        // 1. In a real secure implementation, we'd hash the token received from the QR
-        // For this example, we'll assume the token in DB is already hashed or we do it here
-        // const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        // 1. Hash the incoming token to match our secure storage
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
         // 2. Query the QR code
         const { data: qr, error: qrError } = await supabase
@@ -33,24 +32,24 @@ export default async function handler(req, res) {
           vendors (company_name)
         )
       `)
-            .eq('hashed_token', token)
+            .eq('hashed_token', hashedToken)
             .single();
 
         if (qrError || !qr) {
-            await logAttempt(null, 'failure', 'Invalid token detected', metadata);
+            await logAttempt(null, null, 'failure', 'Invalid token detected', metadata);
             return res.status(404).json({ status: 'invalid', message: 'Counterfeit or Invalid QR Code' });
         }
 
         if (qr.status === 'used') {
-            await logAttempt(qr.id, 'warning', 'Duplicate scan attempt', metadata);
+            await logAttempt(qr.id, qr.vendor_id, 'warning', 'Duplicate scan attempt', metadata);
             return res.status(200).json({ status: 'used', message: 'QR Code already used/expired', data: qr });
         }
 
         // 3. Log success and return data
-        await logAttempt(qr.id, 'success', 'Verification successful', metadata);
+        await logAttempt(qr.id, qr.vendor_id, 'success', 'Verification successful', metadata);
 
-        // Optionally update status to 'used' if one-time
-        // await supabase.from('qr_codes').update({ status: 'used' }).eq('id', qr.id);
+        // Update status to 'used'
+        await supabase.from('qr_codes').update({ status: 'used' }).eq('id', qr.id);
 
         return res.status(200).json({
             status: 'valid',
@@ -64,9 +63,10 @@ export default async function handler(req, res) {
     }
 }
 
-async function logAttempt(qrId, result, details, metadata = {}) {
-    await supabase.from('verification_logs').insert([{
+async function logAttempt(qrId, vendorId, result, details, metadata = {}) {
+    await supabase.from('audit_logs').insert([{
         qr_id: qrId,
+        vendor_id: vendorId,
         result: result,
         details: details,
         ip_address: metadata.ip || 'Unknown',

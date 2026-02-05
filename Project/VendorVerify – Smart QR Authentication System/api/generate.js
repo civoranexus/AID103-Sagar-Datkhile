@@ -26,9 +26,8 @@ export default async function handler(req, res) {
             .from('qr_codes')
             .insert([{
                 product_id: productId,
-                hashed_token: rawToken, // For simplicity in this demo we use the raw token, 
-                // but ideally we'd store the hash and return raw to user.
-                // In this setup, hashed_token column will hold what's in the QR.
+                vendor_id: vendorId,
+                hashed_token: hashedToken, // Securely store the hash
                 status: 'active'
             }])
             .select()

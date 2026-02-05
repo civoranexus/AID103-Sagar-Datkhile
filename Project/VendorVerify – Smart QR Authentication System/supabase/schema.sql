@@ -14,6 +14,14 @@ CREATE TABLE vendors (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+CREATE TABLE verifiers (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  full_name TEXT,
+  employee_id TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 CREATE TABLE products (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   vendor_id UUID REFERENCES vendors(id) ON DELETE CASCADE,
@@ -62,6 +70,7 @@ CREATE INDEX idx_logs_vendor ON audit_logs(vendor_id);
 -- Enable RLS
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vendors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE verifiers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE qr_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
@@ -76,6 +85,10 @@ CREATE POLICY "Users can insert own profile" ON users FOR INSERT WITH CHECK (aut
 CREATE POLICY "Vendors can view own company" ON vendors FOR SELECT USING (user_id = auth.uid());
 CREATE POLICY "Vendors can update own company" ON vendors FOR UPDATE USING (user_id = auth.uid());
 CREATE POLICY "Vendors can insert own company" ON vendors FOR INSERT WITH CHECK (user_id = auth.uid());
+
+-- Verifiers: Verifiers can view/edit their own profiles.
+CREATE POLICY "Verifiers can view own profile" ON verifiers FOR SELECT USING (user_id = auth.uid());
+CREATE POLICY "Verifiers can insert own profile" ON verifiers FOR INSERT WITH CHECK (user_id = auth.uid());
 
 -- Products: Vendors can manage their own products. Verifiers can view products.
 CREATE POLICY "Vendors can manage own products" ON products FOR ALL USING (
@@ -110,3 +123,4 @@ CREATE POLICY "Verifiers can insert logs" ON audit_logs FOR INSERT WITH CHECK (
 CREATE POLICY "Admins can view all logs" ON audit_logs FOR SELECT USING (
   EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
 );
+

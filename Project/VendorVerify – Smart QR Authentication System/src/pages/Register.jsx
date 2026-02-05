@@ -35,7 +35,7 @@ const Register = () => {
             if (authError) throw authError;
 
             if (authData.user) {
-                // 2. Create user profile (Upsert to handle potential retries)
+                // 2. Create user profile in 'users' table
                 const { error: profileError } = await supabase
                     .from('users')
                     .upsert([
@@ -61,23 +61,33 @@ const Register = () => {
                         ]);
                     if (vendorError) throw vendorError;
                 } else if (formData.role === 'verifier') {
-                    // Note: Use 'verifiers' table if it exists, otherwise skip
-                    // The error "relation verifiers does not exist" suggests the code is trying to find it
-                    // I will ensure we only use valid tables from our schema
+                    // Correctly insert into the 'verifiers' table
                     const { error: verifierError } = await supabase
-                        .from('users') // Staying synced with 'users'
-                        .update({ full_name: formData.fullName })
-                        .eq('id', authData.user.id);
+                        .from('verifiers')
+                        .insert([
+                            {
+                                user_id: authData.user.id,
+                                full_name: formData.fullName,
+                                employee_id: `EMP-${Math.floor(1000 + Math.random() * 9000)}` // Mock employee ID
+                            }
+                        ]);
                     if (verifierError) throw verifierError;
                 }
 
                 addToast('Account created successfully! Welcome to the network.', 'success');
 
-                // Redirect based on role
-                if (formData.role === 'vendor') navigate('/VendorDashboard');
-                else navigate('/VerifierDashboard');
+                // If session is present, redirect to dashboard. 
+                // If not (email confirmation required), stay on page or redirect to login.
+                if (authData.session) {
+                    if (formData.role === 'vendor') navigate('/VendorDashboard');
+                    else navigate('/VerifierDashboard');
+                } else {
+                    addToast('Please confirm your email to continue.', 'info');
+                    navigate('/Login');
+                }
             }
         } catch (err) {
+            console.error('Registration error:', err);
             addToast(err.message || 'Registration failed', 'error');
         } finally {
             setLoading(false);
