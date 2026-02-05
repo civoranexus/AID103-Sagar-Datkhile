@@ -13,7 +13,18 @@ export default async function handler(req, res) {
     }
 
     const { scanned_serial_number, verifier_id } = req.body;
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'Unknown';
+
+    // Extract Client IP with priority and normalization
+    let clientIp = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress || null;
+    if (clientIp && clientIp.includes(',')) {
+        clientIp = clientIp.split(',')[0].trim();
+    }
+    if (clientIp && clientIp.startsWith('::ffff:')) {
+        clientIp = clientIp.replace('::ffff:', '');
+    }
+    if (clientIp === '::1') clientIp = '127.0.0.1';
+
+    const ip = clientIp;
 
     if (!scanned_serial_number) {
         return res.status(400).json({ status: 'invalid', message: 'Serial number is required' });
@@ -46,7 +57,13 @@ export default async function handler(req, res) {
         // 4. If record exists and status = used, return status = used
         if (qr.status === 'used') {
             await logVerification(verifier_id, qr.vendor_id, qr.id, qr.product_id, ip, 'used');
-            return res.status(200).json({ status: 'used', message: 'QR code has already been verified' });
+            return res.status(200).json({
+                status: 'used',
+                message: 'QR code has already been verified',
+                product_name: qr.products?.name,
+                product_serial_number: scanned_serial_number,
+                vendor_name: qr.vendors?.company_name
+            });
         }
 
         // 5. If record exists and status = active, mark QR as used

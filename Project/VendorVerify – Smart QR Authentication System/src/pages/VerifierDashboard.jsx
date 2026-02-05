@@ -157,9 +157,9 @@ const VerifierDashboard = () => {
 
             const result = await response.json();
 
-            if (result.status === 'valid') {
+            if (result.status === 'valid' || result.status === 'used') {
                 setScanResult({
-                    status: 'valid',
+                    status: result.status,
                     product: {
                         name: result.product_name,
                         serial_number: result.product_serial_number,
@@ -167,15 +167,15 @@ const VerifierDashboard = () => {
                     },
                     timestamp: new Date().toISOString()
                 });
-                addToast('Product Authenticated!', 'success');
+                addToast(result.status === 'valid' ? 'Product Authenticated!' : 'Warning: Already Scanned',
+                    result.status === 'valid' ? 'success' : 'warning');
             } else {
                 setScanResult({
                     status: result.status || 'invalid',
                     timestamp: new Date().toISOString(),
                     message: result.message
                 });
-                addToast(result.status === 'used' ? 'Warning: Already Scanned' : 'Alert: Invalid QR',
-                    result.status === 'used' ? 'warning' : 'error');
+                addToast('Alert: Invalid QR', 'error');
             }
 
             if (user) await fetchInitialData(user.id);
@@ -282,7 +282,7 @@ const VerifierDashboard = () => {
                                                                     fontSize: '0.9rem',
                                                                     cursor: 'pointer',
                                                                     color: 'black',
-                                                                    
+
                                                                 }}
                                                                 onClick={() => setSelectedScan(scan)}
                                                             >

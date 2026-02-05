@@ -194,10 +194,10 @@ const VendorDashboard = () => {
                                                         border: 'none',
                                                         padding: 0,
                                                         fontWeight: 500,
-                                                        color: 'var(--accent)',
+                                                        color: 'black',
                                                         cursor: 'pointer',
                                                         textAlign: 'left',
-                                                        textDecoration: 'underline'
+                                                        fontWeight: 'bold'
                                                     }}
                                                 >
                                                     {product.name}

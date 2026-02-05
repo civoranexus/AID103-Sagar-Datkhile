@@ -15,6 +15,18 @@ export default async function handler(req, res) {
 
     const { token, metadata } = req.body;
 
+    // Extract Client IP with priority and normalization
+    let clientIp = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress || null;
+    if (clientIp && clientIp.includes(',')) {
+        clientIp = clientIp.split(',')[0].trim();
+    }
+    if (clientIp && clientIp.startsWith('::ffff:')) {
+        clientIp = clientIp.replace('::ffff:', '');
+    }
+    if (clientIp === '::1') clientIp = '127.0.0.1';
+
+    const ip = clientIp;
+
     if (!token) {
         return res.status(400).json({ error: 'Token is required' });
     }
@@ -37,17 +49,17 @@ export default async function handler(req, res) {
             .single();
 
         if (qrError || !qr) {
-            await logAttempt(null, null, 'failure', 'Invalid token detected', metadata);
+            await logAttempt(null, null, 'failure', 'Invalid token detected', ip, metadata);
             return res.status(404).json({ status: 'invalid', message: 'Counterfeit or Invalid QR Code' });
         }
 
         if (qr.status === 'used') {
-            await logAttempt(qr.id, qr.vendor_id, 'warning', 'Duplicate scan attempt', metadata);
+            await logAttempt(qr.id, qr.vendor_id, 'warning', 'Duplicate scan attempt', ip, metadata);
             return res.status(200).json({ status: 'used', message: 'QR Code already used/expired', data: qr });
         }
 
         // 3. Log success and return data
-        await logAttempt(qr.id, qr.vendor_id, 'success', 'Verification successful', metadata);
+        await logAttempt(qr.id, qr.vendor_id, 'success', 'Verification successful', ip, metadata);
 
         // Update status to 'used'
         await supabase.from('qr_codes').update({ status: 'used' }).eq('id', qr.id);
@@ -64,13 +76,13 @@ export default async function handler(req, res) {
     }
 }
 
-async function logAttempt(qrId, vendorId, result, details, metadata = {}) {
+async function logAttempt(qrId, vendorId, result, details, ip, metadata = {}) {
     await supabase.from('audit_logs').insert([{
         qr_id: qrId,
         vendor_id: vendorId,
         result: result,
         details: details,
-        ip_address: metadata.ip || 'Unknown',
+        ip_address: ip,
         location: metadata.location || 'Unknown'
     }]);
 
