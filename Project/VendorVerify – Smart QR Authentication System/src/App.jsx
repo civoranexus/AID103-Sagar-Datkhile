@@ -17,6 +17,13 @@ function App() {
 
     useEffect(() => {
         let isMounted = true;
+        // Safety timeout to prevent infinite loading
+        const safetyTimer = setTimeout(() => {
+            if (loading && isMounted) {
+                console.warn('Auth check timed out, forcing load...');
+                setLoading(false);
+            }
+        }, 5000);
 
         const handleAuthState = async (session) => {
             if (!isMounted) return;
@@ -33,6 +40,9 @@ function App() {
         // Initial check
         supabase.auth.getSession().then(({ data: { session } }) => {
             handleAuthState(session);
+        }).catch(err => {
+            console.error("Session check failed", err);
+            setLoading(false);
         });
 
         // Listener
@@ -42,6 +52,7 @@ function App() {
 
         return () => {
             isMounted = false;
+            clearTimeout(safetyTimer);
             subscription.unsubscribe();
         };
     }, []);

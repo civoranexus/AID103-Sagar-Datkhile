@@ -3,9 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { ScrollArea } from '../components/ScrollArea';
 import { Badge, useToast } from '../components/UI';
-import { CheckCircle2, AlertCircle, MapPin, Globe } from 'lucide-react';
+import { CheckCircle2, AlertCircle, MapPin, Globe, Building2, XCircle, AlertTriangle } from 'lucide-react';
 
-const VendorHistory = () => {
+const VerifierHistory = () => {
     const { addToast } = useToast();
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -19,11 +19,15 @@ const VendorHistory = () => {
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
-            // Fetch ALL history
+            // Fetch ALL history for this verifier
             const { data: historyData, error } = await supabase
                 .from('audit_logs')
-                .select('*, products(name, serial_number)')
-                .eq('vendor_id', user.id)
+                .select(`
+                    *,
+                    products (name, serial_number),
+                    vendors (company_name)
+                `)
+                .eq('verifier_id', user.id)
                 .order('created_at', { ascending: false });
 
             if (error) {
@@ -39,8 +43,8 @@ const VendorHistory = () => {
     return (
         <div className="fade-in" style={{ height: '75vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>Full Scan History</h3>
-                <Badge>{history.length} Events</Badge>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>My Scan History</h3>
+                <Badge>{history.length} Scans</Badge>
             </div>
 
             <div style={{ flex: 1, minHeight: 0, background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
@@ -60,13 +64,15 @@ const VendorHistory = () => {
                             >
                                 <div style={{
                                     width: '48px', height: '48px', borderRadius: '50%',
-                                    backgroundColor: log.status === 'valid' ? 'rgba(16, 185, 129, 0.1)' :
-                                        log.status === 'used' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                    backgroundColor: log.result === 'valid' ? 'rgba(16, 185, 129, 0.1)' :
+                                        log.result === 'used' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    color: log.status === 'valid' ? 'var(--success)' :
-                                        log.status === 'used' ? 'var(--warning)' : 'var(--error)'
+                                    color: log.result === 'valid' ? 'var(--success)' :
+                                        log.result === 'used' ? 'var(--warning)' : 'var(--error)'
                                 }}>
-                                    {log.status === 'valid' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
+                                    {log.result === 'valid' && <CheckCircle2 size={24} />}
+                                    {log.result === 'used' && <AlertTriangle size={24} />}
+                                    {(log.result === 'invalid' || !['valid', 'used'].includes(log.result)) && <XCircle size={24} />}
                                 </div>
 
                                 <div style={{ flex: 1 }}>
@@ -79,15 +85,17 @@ const VendorHistory = () => {
 
                                     <div style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                            <Building2 size={14} />
+                                            {log.vendors?.company_name || 'Unknown Vendor'}
+                                        </div>
+                                        {/* 
+                                           Verifier audits might not always capture location/IP client-side depending on implementation,
+                                           but if they do, show them.
+                                        */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                                             <MapPin size={14} />
                                             {log.location || 'Unknown Location'}
                                         </div>
-                                        {log.ip_address && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                <Globe size={14} />
-                                                {log.ip_address}
-                                            </div>
-                                        )}
                                         <div>
                                             Serial: <span style={{ fontFamily: 'monospace' }}>{log.products?.serial_number}</span>
                                         </div>
@@ -95,8 +103,8 @@ const VendorHistory = () => {
                                 </div>
 
                                 <div>
-                                    <Badge type={log.status === 'valid' ? 'success' : log.status === 'used' ? 'warning' : 'error'}>
-                                        {(log.status || 'UNKNOWN').toUpperCase()}
+                                    <Badge type={log.result === 'valid' ? 'success' : log.result === 'used' ? 'warning' : 'error'}>
+                                        {(log.result || 'UNKNOWN').toUpperCase()}
                                     </Badge>
                                 </div>
                             </div>
@@ -104,7 +112,7 @@ const VendorHistory = () => {
 
                         {history.length === 0 && !loading && (
                             <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                                No scan history recorded yet.
+                                No history found.
                             </div>
                         )}
                     </div>
@@ -114,4 +122,4 @@ const VendorHistory = () => {
     );
 };
 
-export default VendorHistory;
+export default VerifierHistory;

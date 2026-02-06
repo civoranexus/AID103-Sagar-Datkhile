@@ -45,14 +45,14 @@ const VendorProducts = () => {
     };
 
     return (
-        <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div className="fade-in" style={{ height: '75vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>All Products</h3>
                 <Badge>{products.length} Records</Badge>
             </div>
 
             <div style={{ flex: 1, minHeight: 0, background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
-                <ScrollArea style={{ height: '100%' }}>
+                <ScrollArea style={{ height: '100%' }} maxHeight="100%">
                     <div className="table-container" style={{ border: 'none', margin: 0 }}>
                         <table>
                             <thead>
@@ -159,7 +159,7 @@ const VendorProducts = () => {
             </Modal>
 
             {/* Product Details Modal - Reused */}
-            <Modal isOpen={!!selectedProductDetails} onClose={() => setSelectedProductDetails(null)} title="Product Information">
+            <Modal isOpen={!!selectedProductDetails} onClose={() => setSelectedProductDetails(null)} title="Product Information" contentStyle={{ boxShadow: 'none' }}>
                 {selectedProductDetails && (
                     <div className="fade-in">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

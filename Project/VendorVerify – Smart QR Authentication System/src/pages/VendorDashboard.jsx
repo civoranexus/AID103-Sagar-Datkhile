@@ -126,7 +126,7 @@ const VendorDashboard = () => {
 
     return (
         <DashboardLayout role="Vendor" navItems={navItems}>
-            <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div className="fade-in" style={{ display: 'flex', flexDirection: 'column' }}>
                 {/* Header & Stats - "The Image Part" */}
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -436,7 +436,7 @@ const VendorOverview = ({ createdProductSignal }) => {
                     </div>
                 )}
             </Modal>
-            <Modal isOpen={!!selectedProductDetails} onClose={() => setSelectedProductDetails(null)} title="Product Information">
+            <Modal isOpen={!!selectedProductDetails} onClose={() => setSelectedProductDetails(null)} title="Product Information" contentStyle={{ boxShadow: 'none' }}>
                 {selectedProductDetails && (
                     <div className="fade-in">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>

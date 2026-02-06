@@ -143,7 +143,7 @@ export const Badge = ({ children, type = 'info' }) => (
     </span>
 );
 
-export const Modal = ({ isOpen, onClose, title, children }) => {
+export const Modal = ({ isOpen, onClose, title, children, contentStyle = {} }) => {
     if (!isOpen) return null;
     return (
         <div style={{
@@ -154,7 +154,7 @@ export const Modal = ({ isOpen, onClose, title, children }) => {
         }} onClick={onClose}>
             <div
                 className="card shadow-lg fade-in"
-                style={{ width: '100%', maxWidth: '550px', padding: 0, overflow: 'hidden' }}
+                style={{ width: '100%', maxWidth: '550px', padding: 0, overflow: 'hidden', ...contentStyle }}
                 onClick={e => e.stopPropagation()}
             >
                 <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

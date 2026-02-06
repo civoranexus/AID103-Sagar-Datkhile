@@ -15,12 +15,32 @@ import {
     History,
     Activity,
     User,
-    ChevronRight
+    ChevronRight,
+    Search
 } from 'lucide-react';
 import { Button, Card, Badge, Modal, useToast, DashboardLayout } from '../components/UI';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Routes, Route } from 'react-router-dom';
+import VerifierHistory from './VerifierHistory';
 
 const VerifierDashboard = () => {
+    const navItems = [
+        { label: 'Dashboard', path: '/VerifierDashboard', icon: Activity },
+        { label: 'Scan History', path: '/VerifierDashboard/history', icon: History },
+    ];
+
+    return (
+        <DashboardLayout role="Verifier" navItems={navItems}>
+            <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Routes>
+                    <Route index element={<VerifierOverview />} />
+                    <Route path="history" element={<VerifierHistory />} />
+                </Routes>
+            </div>
+        </DashboardLayout>
+    );
+};
+
+const VerifierOverview = () => {
     const { addToast } = useToast();
     const navigate = useNavigate();
     const scannerRef = useRef(null);
@@ -187,225 +207,218 @@ const VerifierDashboard = () => {
         }
     };
 
-    const navItems = [
-        { label: 'Dashboard', path: '/VerifierDashboard', icon: Activity },
-        { label: 'Scan History', path: '/VerifierDashboard/history', icon: History },
-    ];
-
     return (
-        <DashboardLayout role="Verifier" navItems={navItems}>
-            <div className="fade-in" style={{ paddingBottom: '3rem' }}>
-                {/* Header Section */}
-                <div style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                    <div>
-                        <h1 className="font-display" style={{ fontSize: '2rem', color: 'var(--primary)', marginBottom: '0.25rem' }}>
-                            Verifier Dashboard
-                        </h1>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>
-                            Secure verification environment for {verifierName}
-                        </p>
+        <div style={{ paddingBottom: '3rem' }}>
+            {/* Header Section */}
+            <div style={{ marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div>
+                    <h1 className="font-display" style={{ fontSize: '2rem', color: 'var(--primary)', marginBottom: '0.25rem' }}>
+                        Verifier Dashboard
+                    </h1>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>
+                        Secure verification environment for {verifierName}
+                    </p>
+                </div>
+                <Button
+                    onClick={isScanning ? stopScanner : startScanner}
+                    className={isScanning ? "btn-outline" : "btn-primary"}
+                    style={{ height: '3.5rem', padding: '0 2rem', fontSize: '1rem', borderRadius: '14px' }}
+                >
+                    {isScanning ? <XCircle size={20} /> : <Scan size={20} />}
+                    {isScanning ? "Cancel Scanning" : "Start New Scan"}
+                </Button>
+            </div>
+
+            {/* Stats Cards Grid */}
+            <div className="grid grid-cols-3" style={{ marginBottom: '2.5rem' }}>
+                <Card style={{ padding: '1.5rem', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '0.75rem', borderRadius: '12px', color: 'var(--accent)' }}>
+                            <Activity size={24} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 500 }}>Total Scans</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{stats.total}</div>
+                        </div>
                     </div>
-                    <Button
-                        onClick={isScanning ? stopScanner : startScanner}
-                        className={isScanning ? "btn-outline" : "btn-primary"}
-                        style={{ height: '3.5rem', padding: '0 2rem', fontSize: '1rem', borderRadius: '14px' }}
-                    >
-                        {isScanning ? <XCircle size={20} /> : <Scan size={20} />}
-                        {isScanning ? "Cancel Scanning" : "Start New Scan"}
-                    </Button>
-                </div>
+                </Card>
+                <Card style={{ padding: '1.5rem', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '0.75rem', borderRadius: '12px', color: 'var(--success)' }}>
+                            <CheckCircle2 size={24} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 500 }}>Valid Products</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--success)' }}>{stats.valid}</div>
+                        </div>
+                    </div>
+                </Card>
+                <Card style={{ padding: '1.5rem', border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '0.75rem', borderRadius: '12px', color: 'var(--error)' }}>
+                            <AlertTriangle size={24} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 500 }}>Invalid / Used</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--error)' }}>{stats.failed}</div>
+                        </div>
+                    </div>
+                </Card>
+            </div>
 
-                {/* Stats Cards Grid */}
-                <div className="grid grid-cols-3" style={{ marginBottom: '2.5rem' }}>
-                    <Card style={{ padding: '1.5rem', border: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '0.75rem', borderRadius: '12px', color: 'var(--accent)' }}>
-                                <Activity size={24} />
-                            </div>
-                            <div>
-                                <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 500 }}>Total Scans</div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{stats.total}</div>
-                            </div>
-                        </div>
-                    </Card>
-                    <Card style={{ padding: '1.5rem', border: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <div style={{ background: 'rgba(16, 185, 129, 0.1)', padding: '0.75rem', borderRadius: '12px', color: 'var(--success)' }}>
-                                <CheckCircle2 size={24} />
-                            </div>
-                            <div>
-                                <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 500 }}>Valid Products</div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--success)' }}>{stats.valid}</div>
-                            </div>
-                        </div>
-                    </Card>
-                    <Card style={{ padding: '1.5rem', border: '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '0.75rem', borderRadius: '12px', color: 'var(--error)' }}>
-                                <AlertTriangle size={24} />
-                            </div>
-                            <div>
-                                <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 500 }}>Invalid / Used</div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--error)' }}>{stats.failed}</div>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
+            <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) 350px', gap: '2rem' }}>
+                {/* Main Content Area: Scan History Table */}
+                <div className="grid" style={{ gridTemplateColumns: '1fr' }}>
+                    <Card style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                        <h3 style={{ padding: '1.5rem 1.5rem 0', fontSize: '1.1rem', margin: 0 }}>Recent Verification Registry</h3>
+                        <div className="table-container" style={{ border: 'none', marginTop: '1rem' }}>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th style={{ paddingLeft: '1.5rem' }}>Product Name</th>
+                                        <th>Vendor</th>
+                                        <th>Status</th>
+                                        <th>Scanned At</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {recentScans.map(scan => (
+                                        <tr key={scan.id} style={{ transition: 'background-color 0.2s' }} className="hover:bg-slate-50">
+                                            <td>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingLeft: '0.5rem' }}>
+                                                    <div style={{ background: 'var(--background)', padding: '0.5rem', borderRadius: '8px' }}>
+                                                        <Package size={16} color="var(--text-muted)" />
+                                                    </div>
+                                                    <div>
+                                                        <div
+                                                            style={{
+                                                                fontWeight: 600,
+                                                                fontSize: '0.9rem',
+                                                                cursor: 'pointer',
+                                                                color: 'black',
 
-                <div className="grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) 350px', gap: '2rem' }}>
-                    {/* Main Content Area: Scan History Table */}
-                    <div className="grid" style={{ gridTemplateColumns: '1fr' }}>
-                        <Card style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                            <h3 style={{ padding: '1.5rem 1.5rem 0', fontSize: '1.1rem', margin: 0 }}>Recent Verification Registry</h3>
-                            <div className="table-container" style={{ border: 'none', marginTop: '1rem' }}>
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th style={{ paddingLeft: '1.5rem' }}>Product Name</th>
-                                            <th>Vendor</th>
-                                            <th>Status</th>
-                                            <th>Scanned At</th>
+                                                            }}
+                                                            onClick={() => setSelectedScan(scan)}
+                                                        >
+                                                            {scan.qr_codes?.products?.name || 'Unknown Item'}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SN: {scan.qr_codes?.products?.serial_number || 'N/A'}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <Building2 size={14} color="var(--primary)" />
+                                                    <span style={{ fontWeight: 600 }}>
+                                                        {scan.vendors?.company_name || 'Authentic Vendor'}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <Badge type={scan.result === 'valid' ? 'success' : scan.result === 'used' ? 'warning' : 'error'}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                        {scan.result === 'valid' && <CheckCircle2 size={12} />}
+                                                        {scan.result === 'used' && <AlertTriangle size={12} />}
+                                                        {scan.result === 'invalid' && <XCircle size={12} />}
+                                                        {scan.result.toUpperCase()}
+                                                    </div>
+                                                </Badge>
+                                            </td>
+                                            <td>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                                    <Clock size={14} />
+                                                    {new Date(scan.created_at).toLocaleDateString()}
+                                                    <span style={{ opacity: 0.5 }}>|</span>
+                                                    {new Date(scan.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {recentScans.map(scan => (
-                                            <tr key={scan.id} style={{ transition: 'background-color 0.2s' }} className="hover:bg-slate-50">
-                                                <td>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingLeft: '0.5rem' }}>
-                                                        <div style={{ background: 'var(--background)', padding: '0.5rem', borderRadius: '8px' }}>
-                                                            <Package size={16} color="var(--text-muted)" />
-                                                        </div>
-                                                        <div>
-                                                            <div
-                                                                style={{
-                                                                    fontWeight: 600,
-                                                                    fontSize: '0.9rem',
-                                                                    cursor: 'pointer',
-                                                                    color: 'black',
+                                    ))}
+                                    {recentScans.length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                                                No scan history found for your account.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
+                </div>
 
-                                                                }}
-                                                                onClick={() => setSelectedScan(scan)}
-                                                            >
-                                                                {scan.qr_codes?.products?.name || 'Unknown Item'}
-                                                            </div>
-                                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>SN: {scan.qr_codes?.products?.serial_number || 'N/A'}</div>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        <Building2 size={14} color="var(--primary)" />
-                                                        <span style={{ fontWeight: 600 }}>
-                                                            {scan.vendors?.company_name || 'Authentic Vendor'}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <Badge type={scan.result === 'valid' ? 'success' : scan.result === 'used' ? 'warning' : 'error'}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                            {scan.result === 'valid' && <CheckCircle2 size={12} />}
-                                                            {scan.result === 'used' && <AlertTriangle size={12} />}
-                                                            {scan.result === 'invalid' && <XCircle size={12} />}
-                                                            {scan.result.toUpperCase()}
-                                                        </div>
-                                                    </Badge>
-                                                </td>
-                                                <td>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                                                        <Clock size={14} />
-                                                        {new Date(scan.created_at).toLocaleDateString()}
-                                                        <span style={{ opacity: 0.5 }}>|</span>
-                                                        {new Date(scan.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {recentScans.length === 0 && (
-                                            <tr>
-                                                <td colSpan="4" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                                                    No scan history found for your account.
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
+                {/* Sidebar Area: Last Scan Result & Scanner UI */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    {/* Scanner Card */}
+                    {isScanning && (
+                        <Card style={{ padding: '1rem', border: '2px solid var(--accent)', backgroundColor: 'black' }}>
+                            <div id="reader" style={{ width: '100%', borderRadius: '8px', overflow: 'hidden' }}></div>
+                            <div style={{ textAlign: 'center', padding: '1rem 0', color: 'white', fontSize: '0.8rem' }}>
+                                <Loader2 size={16} className="animate-spin" style={{ display: 'inline', marginRight: 8 }} />
+                                Active Security Scanning...
                             </div>
                         </Card>
-                    </div>
+                    )}
 
-                    {/* Sidebar Area: Last Scan Result & Scanner UI */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                        {/* Scanner Card */}
-                        {isScanning && (
-                            <Card style={{ padding: '1rem', border: '2px solid var(--accent)', backgroundColor: 'black' }}>
-                                <div id="reader" style={{ width: '100%', borderRadius: '8px', overflow: 'hidden' }}></div>
-                                <div style={{ textAlign: 'center', padding: '1rem 0', color: 'white', fontSize: '0.8rem' }}>
-                                    <Loader2 size={16} className="animate-spin" style={{ display: 'inline', marginRight: 8 }} />
-                                    Active Security Scanning...
+                    {/* Recent Product Card */}
+                    <Card title="Last Scanned Product" style={{ minHeight: '300px' }}>
+                        {loading && !isScanning ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px' }}>
+                                <Loader2 size={32} className="animate-spin" color="var(--accent)" />
+                                <p style={{ marginTop: '1rem', fontSize: '0.875rem' }}>Processing token...</p>
+                            </div>
+                        ) : scanResult ? (
+                            <div className="fade-in">
+                                <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                                    {scanResult.status === 'valid' ?
+                                        <div style={{ background: 'var(--success)', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', color: 'white' }}>
+                                            <CheckCircle2 size={24} />
+                                        </div> :
+                                        <div style={{ background: scanResult.status === 'used' ? 'var(--warning)' : 'var(--error)', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', color: 'white' }}>
+                                            {scanResult.status === 'used' ? <AlertTriangle size={24} /> : <XCircle size={24} />}
+                                        </div>
+                                    }
+                                    <h3 style={{ marginTop: '1rem', color: scanResult.status === 'valid' ? 'var(--success)' : 'inherit' }}>
+                                        {scanResult.status === 'valid' ? 'AUTHENTIC' : scanResult.status.toUpperCase()}
+                                    </h3>
                                 </div>
-                            </Card>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div>
+                                        <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Product</label>
+                                        <div style={{ fontWeight: 600 }}>{scanResult.product?.name || 'Unidentified'}</div>
+                                    </div>
+                                    {scanResult.product && (
+                                        <>
+                                            <div>
+                                                <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Serial Number</label>
+                                                <div style={{ fontSize: '0.875rem', fontFamily: 'monospace' }}>{scanResult.product.serial_number}</div>
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vendor</label>
+                                                <div style={{ fontSize: '0.875rem' }}>{scanResult.product.vendors?.company_name}</div>
+                                            </div>
+                                        </>
+                                    )}
+                                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '0.5rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                                            <Clock size={12} />
+                                            {new Date(scanResult.timestamp).toLocaleString()}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', textAlign: 'center' }}>
+                                <Scan size={40} style={{ color: 'var(--border)', marginBottom: '1rem' }} />
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Ready for verification.<br />No active scan data.</p>
+                            </div>
                         )}
-
-                        {/* Recent Product Card */}
-                        <Card title="Last Scanned Product" style={{ minHeight: '300px' }}>
-                            {loading && !isScanning ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px' }}>
-                                    <Loader2 size={32} className="animate-spin" color="var(--accent)" />
-                                    <p style={{ marginTop: '1rem', fontSize: '0.875rem' }}>Processing token...</p>
-                                </div>
-                            ) : scanResult ? (
-                                <div className="fade-in">
-                                    <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                                        {scanResult.status === 'valid' ?
-                                            <div style={{ background: 'var(--success)', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', color: 'white' }}>
-                                                <CheckCircle2 size={24} />
-                                            </div> :
-                                            <div style={{ background: scanResult.status === 'used' ? 'var(--warning)' : 'var(--error)', width: '48px', height: '48px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', color: 'white' }}>
-                                                {scanResult.status === 'used' ? <AlertTriangle size={24} /> : <XCircle size={24} />}
-                                            </div>
-                                        }
-                                        <h3 style={{ marginTop: '1rem', color: scanResult.status === 'valid' ? 'var(--success)' : 'inherit' }}>
-                                            {scanResult.status === 'valid' ? 'AUTHENTIC' : scanResult.status.toUpperCase()}
-                                        </h3>
-                                    </div>
-
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                        <div>
-                                            <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Product</label>
-                                            <div style={{ fontWeight: 600 }}>{scanResult.product?.name || 'Unidentified'}</div>
-                                        </div>
-                                        {scanResult.product && (
-                                            <>
-                                                <div>
-                                                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Serial Number</label>
-                                                    <div style={{ fontSize: '0.875rem', fontFamily: 'monospace' }}>{scanResult.product.serial_number}</div>
-                                                </div>
-                                                <div>
-                                                    <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vendor</label>
-                                                    <div style={{ fontSize: '0.875rem' }}>{scanResult.product.vendors?.company_name}</div>
-                                                </div>
-                                            </>
-                                        )}
-                                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', marginTop: '0.5rem' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
-                                                <Clock size={12} />
-                                                {new Date(scanResult.timestamp).toLocaleString()}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', textAlign: 'center' }}>
-                                    <Scan size={40} style={{ color: 'var(--border)', marginBottom: '1rem' }} />
-                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Ready for verification.<br />No active scan data.</p>
-                                </div>
-                            )}
-                        </Card>
-                    </div>
+                    </Card>
                 </div>
             </div>
             {/* Product Details Modal for Recent Scans */}
-            <Modal isOpen={!!selectedScan} onClose={() => setSelectedScan(null)} title="Verified Product Details">
+            <Modal isOpen={!!selectedScan} onClose={() => setSelectedScan(null)} title="Verified Product Details" contentStyle={{ boxShadow: 'none' }}>
                 {selectedScan && (
                     <div className="fade-in">
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -455,7 +468,7 @@ const VerifierDashboard = () => {
                     </div>
                 )}
             </Modal>
-        </DashboardLayout>
+        </div>
     );
 };
 
