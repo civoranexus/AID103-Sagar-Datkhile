@@ -5,6 +5,7 @@ import { supabase } from './lib/supabase';
 // Pages
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 const VendorDashboard = lazy(() => import('./pages/VendorDashboard'));
 const VerifierDashboard = lazy(() => import('./pages/VerifierDashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
@@ -108,7 +109,7 @@ function App() {
                 <Route path="/Register" element={session && userRole ? <Navigate to={getDashboardPath(userRole)} /> : <Register />} />
 
                 {/* Root Redirects */}
-                <Route path="/" element={session && userRole ? <Navigate to={getDashboardPath(userRole)} /> : session && !userRole ? <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: '1.25rem', fontWeight: 600, color: '#3b82f6', marginBottom: '0.5rem' }}>FINALIZING PROFILE</div><div style={{ fontSize: '0.875rem', opacity: 0.6 }}>Synchronizing identity...</div></div></div> : <Navigate to="/Login" />} />
+                <Route path="/" element={session && userRole ? <Navigate to={getDashboardPath(userRole)} /> : session && !userRole ? <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: '1.25rem', fontWeight: 600, color: '#3b82f6', marginBottom: '0.5rem' }}>FINALIZING PROFILE</div><div style={{ fontSize: '0.875rem', opacity: 0.6 }}>Synchronizing identity...</div></div></div> : <LandingPage />} />
                 <Route path="/login" element={<Navigate to="/Login" />} />
                 <Route path="/register" element={<Navigate to="/Register" />} />
 
