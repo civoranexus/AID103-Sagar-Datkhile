@@ -197,7 +197,7 @@ export const DashboardLayout = ({ children, role, navItems }) => {
     const handleLogout = async () => {
         await supabase.auth.signOut();
         addToast('Sign out successful', 'success');
-        navigate('/Login');
+        navigate('/');
     };
 
     return (
