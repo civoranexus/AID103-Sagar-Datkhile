@@ -24,7 +24,21 @@ export default async function handler(req, res) {
     }
     if (clientIp === '::1') clientIp = '127.0.0.1';
 
-    const ip = clientIp;
+    // Development Shim: If localhost, fetch public IP to test location lookup
+    let ip = clientIp;
+    if (ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.')) {
+        try {
+            const publicIpRes = await fetch('https://api.ipify.org?format=json');
+            if (publicIpRes.ok) {
+                const publicIpData = await publicIpRes.json();
+                ip = publicIpData.ip;
+                console.log('Dev Mode: Resolved Public IP for testing:', ip);
+            }
+        } catch (e) {
+            console.warn('Dev Mode: Could not resolve public IP:', e.message);
+        }
+    }
+    const location = await fetchLocation(ip);
 
     if (!scanned_serial_number) {
         return res.status(400).json({ status: 'invalid', message: 'Serial number is required' });
@@ -50,13 +64,13 @@ export default async function handler(req, res) {
 
         // 3. If no record exists, return status = invalid
         if (qrError || !qr) {
-            await logVerification(verifier_id, null, null, null, ip, 'invalid');
+            await logVerification(verifier_id, null, null, null, ip, location, 'invalid');
             return res.status(200).json({ status: 'invalid', message: 'Invalid or tampered QR code' });
         }
 
         // 4. If record exists and status = used, return status = used
         if (qr.status === 'used') {
-            await logVerification(verifier_id, qr.vendor_id, qr.id, qr.product_id, ip, 'used');
+            await logVerification(verifier_id, qr.vendor_id, qr.id, qr.product_id, ip, location, 'used');
             return res.status(200).json({
                 status: 'used',
                 message: 'QR code has already been verified',
@@ -75,7 +89,7 @@ export default async function handler(req, res) {
         if (updateError) throw updateError;
 
         // 6 & 7. Fetch details (already fetched in select) and log audit record
-        await logVerification(verifier_id, qr.vendor_id, qr.id, qr.product_id, ip, 'valid');
+        await logVerification(verifier_id, qr.vendor_id, qr.id, qr.product_id, ip, location, 'valid');
 
         // 8. Return response
         return res.status(200).json({
@@ -91,7 +105,7 @@ export default async function handler(req, res) {
     }
 }
 
-async function logVerification(verifierId, vendorId, qrId, productId, ip, result) {
+async function logVerification(verifierId, vendorId, qrId, productId, ip, location, result) {
     try {
         let verifierName = 'Anonymous';
         if (verifierId) {
@@ -107,9 +121,41 @@ async function logVerification(verifierId, vendorId, qrId, productId, ip, result
             product_id: productId,
             ip_address: ip,
             result: result,
-            location: 'API verification endpoint'
+            location: location || 'Unknown'
         }]);
     } catch (err) {
         console.error('Audit logging failed:', err);
+    }
+}
+
+async function fetchLocation(ip) {
+    // Basic local / private IP check
+    if (!ip || ip === '127.0.0.1' || ip === '::1' || ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.16.')) {
+        return 'Unknown';
+    }
+
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5s timeout
+
+        const response = await fetch(`https://ipapi.co/${ip}/json/`, {
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) return 'Unknown';
+
+        const data = await response.json();
+
+        // ipapi.co returns 'error' field if something goes wrong
+        if (data.error) return 'Unknown';
+
+        // Join parts with comma, filtering out empty values
+        return [data.city, data.region, data.country_name].filter(Boolean).join(', ');
+    } catch (error) {
+        // Silent fail for location lookup
+        console.warn('Location lookup failed:', error.message);
+        return 'Unknown';
     }
 }
