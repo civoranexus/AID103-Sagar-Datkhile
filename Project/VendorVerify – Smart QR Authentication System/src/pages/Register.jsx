@@ -120,7 +120,7 @@ const Register = () => {
                         <ShieldPlus color="white" size={32} />
                     </div>
                     <h1 className="font-display" style={{ fontSize: '1.875rem', color: 'var(--primary)', marginBottom: '0.5rem' }}>Create Account</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>Join VendorVerify security network</p>
+                    <p style={{ color: 'var(--text-muted)' }}>Join Vendor Verify security network</p>
                 </div>
 
                 <Card style={{ padding: '2.5rem' }}>

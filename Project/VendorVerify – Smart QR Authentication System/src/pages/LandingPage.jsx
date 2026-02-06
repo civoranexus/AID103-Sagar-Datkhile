@@ -50,7 +50,7 @@ const LandingPage = () => {
                         <div style={{ background: 'var(--primary)', padding: '0.5rem', borderRadius: '12px', color: 'white' }}>
                             <ShieldCheck size={28} />
                         </div>
-                        <span className="font-display" style={{ fontSize: '1.5rem', color: 'var(--primary)' }}>VendorVerify</span>
+                        <span className="font-display" style={{ fontSize: '1.5rem', color: 'var(--primary)' }}>Vendor Verify</span>
                     </div>
 
                     {/* Desktop Links */}
@@ -127,7 +127,7 @@ const LandingPage = () => {
                         Verify Products. <span style={{ color: 'var(--accent)' }}>Prevent Counterfeits.</span><br />Build Trust.
                     </h1>
                     <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', marginBottom: '3rem', maxWidth: '600px', margin: '0 auto 3rem' }}>
-                        VendorVerify is a decentralized, secure QR-based authentication system that helps verify product authenticity in real time.
+                        Vendor Verify is a decentralized, secure QR-based authentication system that helps verify product authenticity in real time.
                     </p>
                     <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <Button className="btn-primary" style={{ padding: '1rem 2.5rem', fontSize: '1.1rem' }} onClick={() => navigate('/Register')}>
@@ -143,9 +143,9 @@ const LandingPage = () => {
             {/* --- About Section --- */}
             <section style={{ padding: '6rem 2rem', backgroundColor: 'white' }}>
                 <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'center' }}>
-                    <h2 className="font-display" style={{ fontSize: '2.5rem', marginBottom: '1.5rem' }}>What is VendorVerify?</h2>
+                    <h2 className="font-display" style={{ fontSize: '2.5rem', marginBottom: '1.5rem' }}>What is Vendor Verify?</h2>
                     <p style={{ fontSize: '1.1rem', color: 'var(--text-muted)', lineHeight: 1.8, marginBottom: '3rem' }}>
-                        VendorVerify is a next-generation smart authentication platform designed to bridge the trust gap between vendors and consumers.
+                        Vendor Verify is a next-generation smart authentication platform designed to bridge the trust gap between vendors and consumers.
                         By assigning a unique, tamper-proof QR code to every product, we enable instant verification of authenticity, preventing fraud and ensuring safety.
                     </p>
                     <div className="grid grid-cols-3" style={{ gap: '2rem' }}>
@@ -170,7 +170,7 @@ const LandingPage = () => {
             <section id="how-it-works" style={{ padding: '6rem 2rem', backgroundColor: 'var(--background)' }}>
                 <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
                     <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-                        <h2 className="font-display" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>How VendorVerify Works</h2>
+                        <h2 className="font-display" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>How Vendor Verify Works</h2>
                         <p style={{ color: 'var(--text-muted)' }}>Four simple steps to absolute security</p>
                     </div>
 
@@ -178,8 +178,8 @@ const LandingPage = () => {
                         {[
                             { step: "01", title: "Vendor Registers", desc: "Vendors create an account and register their product details in our secure system." },
                             { step: "02", title: "QR Generation", desc: "The system generates a unique, encrypted QR code linked to the specific product unit." },
-                            { step: "03", title: "Consumer Scans", desc: "Verifiers or customers scan the QR code using the VendorVerify app or camera." },
-                            { step: "04", title: "Instant Result", desc: "Get immediate feedback: Authentic, Invalid, or Already Used." }
+                            { step: "03", title: "Consumer Scans", desc: "Verifiers or customers scan the QR code using the Vendor Verify app or camera." },
+                            { step: "04", title: "Instant Result", desc: "Get immediate feedback: Authentic, Invalid or Already Used." }
                         ].map((item, idx) => (
                             <div key={idx} style={{ position: 'relative', padding: '2rem', backgroundColor: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
                                 <div style={{ fontSize: '4rem', fontWeight: 700, color: 'var(--border)', opacity: 0.5, position: 'absolute', top: '1rem', right: '1.5rem' }}>
@@ -255,7 +255,7 @@ const LandingPage = () => {
             <section id="for-vendors" style={{ padding: '6rem 2rem', backgroundColor: 'var(--background)' }}>
                 <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
                     <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-                        <h2 className="font-display" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Who Is VendorVerify For?</h2>
+                        <h2 className="font-display" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Who Is Vendor Verify For?</h2>
                     </div>
 
                     <div className="grid grid-cols-3" style={{ gap: '2rem' }}>
@@ -311,7 +311,7 @@ const LandingPage = () => {
                 }}>
                     <h2 className="font-display" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Start Verifying Products with Confidence</h2>
                     <p style={{ fontSize: '1.2rem', opacity: 0.9, marginBottom: '2.5rem', maxWidth: '600px' }}>
-                        Join VendorVerify today and make product authentication simple, secure, and reliable for everyone.
+                        Join Vendor Verify today and make product authentication simple, secure and reliable for everyone.
                     </p>
                     <Button className="btn-accent" style={{ padding: '1rem 3rem', fontSize: '1.1rem' }} onClick={() => navigate('/Register')}>
                         Create Free Account
@@ -320,38 +320,9 @@ const LandingPage = () => {
             </section>
 
             {/* --- Footer --- */}
-            <footer style={{ backgroundColor: 'white', borderTop: '1px solid var(--border)', padding: '4rem 2rem 2rem' }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2rem' }}>
-                        <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                                <div style={{ background: 'var(--primary)', padding: '0.25rem', borderRadius: '6px', color: 'white' }}>
-                                    <ShieldCheck size={20} />
-                                </div>
-                                <span className="font-display" style={{ fontSize: '1.25rem', color: 'var(--primary)' }}>VendorVerify</span>
-                            </div>
-                            <p style={{ color: 'var(--text-muted)', maxWidth: '300px' }}>
-                                Developed under Civora X Internship Program.
-                                <br />Bringing trust to supply chains everywhere.
-                            </p>
-                        </div>
-                        <div style={{ display: 'flex', gap: '3rem' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <strong>Links</strong>
-                                <span style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => scrollToSection('how-it-works')}>How it Works</span>
-                                <span style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => scrollToSection('features')}>Features</span>
-                                <span style={{ color: 'var(--text-muted)', cursor: 'pointer' }} onClick={() => navigate('/Login')}>Login</span>
-                            </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <strong>Legal</strong>
-                                <a href="#" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Privacy Policy</a>
-                                <a href="#" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Terms of Use</a>
-                            </div>
-                        </div>
-                    </div>
-                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                        © {new Date().getFullYear()} Civora Nexus Pvt. Ltd. All rights reserved.
-                    </div>
+            <footer style={{ backgroundColor: 'white', borderTop: '1px solid var(--border)', padding: '2rem' }}>
+                <div style={{ maxWidth: '1200px', margin: '0 auto', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                    © 2026 Civora Nexus Pvt. Ltd. All rights reserved.
                 </div>
             </footer>
 

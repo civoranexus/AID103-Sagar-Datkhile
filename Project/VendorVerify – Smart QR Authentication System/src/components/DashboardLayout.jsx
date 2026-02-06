@@ -44,7 +44,7 @@ export default function DashboardLayout({ children, role, title }) {
                     <div style={{ padding: '0.5rem', backgroundColor: 'var(--accent)', borderRadius: '8px' }}>
                         <QrCode size={24} color="white" />
                     </div>
-                    <h2 style={{ color: 'white', fontSize: '1.25rem' }}>VendorVerify</h2>
+                    <h2 style={{ color: 'white', fontSize: '1.25rem' }}>Vendor Verify</h2>
                 </div>
 
                 <nav style={{ flex: 1 }}>
