@@ -41,7 +41,17 @@ const Login = () => {
             }
 
             addToast('Welcome back!', 'success');
-            // Redirection is handled by App.jsx auth listener
+
+            // Redirect based on role
+            if (userData.role === 'vendor') {
+                navigate('/VendorDashboard');
+            } else if (userData.role === 'verifier') {
+                navigate('/VerifierDashboard');
+            } else if (userData.role === 'admin') {
+                navigate('/AdminDashboard');
+            } else {
+                navigate('/');
+            }
 
         } catch (err) {
             addToast(err.message || 'Invalid login credentials', 'error');

@@ -105,11 +105,11 @@ function App() {
         }>
             <Routes>
                 {/* Public Routes */}
-                <Route path="/Login" element={session && userRole ? <Navigate to={getDashboardPath(userRole)} /> : <Login />} />
-                <Route path="/Register" element={session && userRole ? <Navigate to={getDashboardPath(userRole)} /> : <Register />} />
+                <Route path="/Login" element={<Login />} />
+                <Route path="/Register" element={<Register />} />
 
                 {/* Root Redirects */}
-                <Route path="/" element={session && userRole ? <Navigate to={getDashboardPath(userRole)} /> : session && !userRole ? <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}><div style={{ textAlign: 'center' }}><div style={{ fontSize: '1.25rem', fontWeight: 600, color: '#3b82f6', marginBottom: '0.5rem' }}>FINALIZING PROFILE</div><div style={{ fontSize: '0.875rem', opacity: 0.6 }}>Synchronizing identity...</div></div></div> : <LandingPage />} />
+                <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Navigate to="/Login" />} />
                 <Route path="/register" element={<Navigate to="/Register" />} />
 
