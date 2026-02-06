@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard,
     Plus,
@@ -15,10 +16,12 @@ import {
     Building2
 } from 'lucide-react';
 import { DashboardLayout, Button, Card, Badge, Modal, useToast } from '../components/UI';
+import { ScrollArea } from '../components/ScrollArea';
 import { QRCodeCanvas } from 'qrcode.react';
 
 const VendorDashboard = () => {
     const { addToast } = useToast();
+    const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [history, setHistory] = useState([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,20 +45,21 @@ const VendorDashboard = () => {
             const { data: vInfo } = await supabase.from('vendors').select('company_name').eq('id', user.id).single();
             if (vInfo) setVendorName(vInfo.company_name);
 
-            // Fetch products using user.id as vendor_id
+            // Fetch products using user.id as vendor_id - limit to 5 most recent
             const { data: productsData } = await supabase
                 .from('products')
                 .select('*')
                 .eq('vendor_id', user.id)
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .limit(5);
 
-            // Fetch scan history for vendor's products
+            // Fetch scan history for vendor's products - limit to 5 most recent
             const { data: historyData } = await supabase
                 .from('audit_logs')
                 .select('*, products(name, serial_number)')
                 .eq('vendor_id', user.id)
                 .order('created_at', { ascending: false })
-                .limit(10);
+                .limit(5);
 
             setProducts(productsData || []);
             setHistory(historyData || []);
@@ -172,87 +176,98 @@ const VendorDashboard = () => {
 
                 <div className="grid grid-cols-2">
                     {/* Recent Products */}
-                    <Card title="Recent Products" style={{ padding: '1.5rem' }}>
-                        <div className="table-container">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Product</th>
-                                        <th>Description</th>
-                                        <th>Status</th>
-                                        <th>QR</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {products.slice(0, 5).map(product => (
-                                        <tr key={product.id}>
-                                            <td>
-                                                <button
-                                                    onClick={() => setSelectedProductDetails(product)}
-                                                    style={{
-                                                        background: 'none',
-                                                        border: 'none',
-                                                        padding: 0,
-                                                        fontWeight: 500,
-                                                        color: 'black',
-                                                        cursor: 'pointer',
-                                                        textAlign: 'left',
-                                                        fontWeight: 'bold'
-                                                    }}
-                                                >
-                                                    {product.name}
-                                                </button>
-                                            </td>
-                                            <td style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                                                {product.description || 'No description'}
-                                            </td>
-                                            <td><Badge type="success">Active</Badge></td>
-                                            <td>
-                                                <Button
-                                                    variant="outline"
-                                                    style={{ padding: '0.4rem', border: 'none' }}
-                                                    onClick={() => setSelectedQR(product)}
-                                                >
-                                                    <ExternalLink size={16} />
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {products.length === 0 && (
-                                        <tr>
-                                            <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No products found</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                    <Card title="Recent Products" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <div style={{ flex: 1, minHeight: 0 }}>
+                            <ScrollArea maxHeight="400px">
+                                <div className="table-container" style={{ border: 'none' }}>
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Product</th>
+                                                <th>Description</th>
+                                                <th>Status</th>
+                                                <th>QR</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {products.map(product => (
+                                                <tr key={product.id}>
+                                                    <td>
+                                                        <button
+                                                            onClick={() => setSelectedProductDetails(product)}
+                                                            style={{
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                padding: 0,
+                                                                fontWeight: 500,
+                                                                color: 'black',
+                                                                cursor: 'pointer',
+                                                                textAlign: 'left',
+                                                                fontWeight: 'bold'
+                                                            }}
+                                                        >
+                                                            {product.name}
+                                                        </button>
+                                                    </td>
+                                                    <td style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                                                        {product.description || 'No description'}
+                                                    </td>
+                                                    <td><Badge type="success">Active</Badge></td>
+                                                    <td>
+                                                        <Button
+                                                            variant="outline"
+                                                            style={{ padding: '0.4rem', border: 'none' }}
+                                                            onClick={() => setSelectedQR(product)}
+                                                        >
+                                                            <ExternalLink size={16} />
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {products.length === 0 && (
+                                                <tr>
+                                                    <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No products created yet</td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </ScrollArea>
                         </div>
+                        <Button variant="outline" style={{ width: '100%', marginTop: '1rem' }} onClick={() => navigate('/VendorDashboard/products')}>View All Products</Button>
                     </Card>
 
                     {/* Scan Activity */}
-                    <Card title="Recent Scan History" style={{ padding: '1.5rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            {history.map(log => (
-                                <div key={log.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem', borderBottom: '1px solid var(--border)' }}>
-                                    <div style={{
-                                        width: '40px', height: '40px', borderRadius: '50%',
-                                        backgroundColor: log.status === 'valid' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        color: log.status === 'valid' ? 'var(--success)' : 'var(--error)'
-                                    }}>
-                                        {log.status === 'valid' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{log.products?.name || 'Unknown Product'}</div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{log.location || 'Unknown Location'} • {new Date(log.created_at).toLocaleTimeString()}</div>
-                                    </div>
-                                    <Badge type={log.status === 'valid' ? 'success' : 'error'}>{log.status}</Badge>
+                    <Card title="Recent Scan History" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <div style={{ flex: 1, minHeight: 0 }}>
+                            <ScrollArea maxHeight="400px">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    {history.map(log => (
+                                        <div key={log.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem', borderBottom: '1px solid var(--border)' }}>
+                                            <div style={{
+                                                width: '40px', height: '40px', borderRadius: '50%',
+                                                backgroundColor: log.status === 'valid' ? 'rgba(16, 185, 129, 0.1)' :
+                                                    log.status === 'used' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                color: log.status === 'valid' ? 'var(--success)' :
+                                                    log.status === 'used' ? 'var(--warning)' : 'var(--error)'
+                                            }}>
+                                                {log.status === 'valid' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{log.products?.name || 'Unknown Product'}</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{log.location || 'Unknown Location'} • {new Date(log.created_at).toLocaleTimeString()}</div>
+                                            </div>
+                                            <Badge type={log.status === 'valid' ? 'success' : log.status === 'used' ? 'warning' : 'error'}>{log.status}</Badge>
+                                        </div>
+                                    ))}
+                                    {history.length === 0 && (
+                                        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No scans recorded yet</div>
+                                    )}
                                 </div>
-                            ))}
-                            {history.length === 0 && (
-                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No scan activity yet</div>
-                            )}
+                            </ScrollArea>
                         </div>
-                        <Button variant="outline" style={{ width: '100%', marginTop: '1rem' }}>View All History</Button>
+                        <Button variant="outline" style={{ width: '100%', marginTop: '1rem' }} onClick={() => navigate('/VendorDashboard/history')}>View All History</Button>
                     </Card>
                 </div>
             </div>
