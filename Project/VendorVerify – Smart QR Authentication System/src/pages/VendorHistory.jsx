@@ -60,21 +60,21 @@ const VendorHistory = () => {
                             >
                                 <div style={{
                                     width: '48px', height: '48px', borderRadius: '50%',
-                                    backgroundColor: log.status === 'valid' ? 'rgba(16, 185, 129, 0.1)' :
-                                        log.status === 'used' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                    backgroundColor: log.result === 'valid' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    color: log.status === 'valid' ? 'var(--success)' :
-                                        log.status === 'used' ? 'var(--warning)' : 'var(--error)'
+                                    color: log.result === 'valid' ? 'var(--success)' : 'var(--error)',
+                                    flexShrink: 0
                                 }}>
-                                    {log.status === 'valid' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
+                                    {log.result === 'valid' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
                                 </div>
 
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                                    <div style={{ marginBottom: '0.25rem' }}>
                                         <span style={{ fontWeight: 600, fontSize: '1rem' }}>{log.products?.name || 'Unknown Product'}</span>
-                                        <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-                                            {new Date(log.created_at).toLocaleString()}
-                                        </span>
+                                    </div>
+
+                                    <div style={{ marginBottom: '0.25rem', fontSize: '0.875rem', fontWeight: 500 }}>
+                                        Scanned by {log.verifier_name || 'Anonymous'}
                                     </div>
 
                                     <div style={{ display: 'flex', gap: '1rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
@@ -94,9 +94,12 @@ const VendorHistory = () => {
                                     </div>
                                 </div>
 
-                                <div>
-                                    <Badge type={log.status === 'valid' ? 'success' : log.status === 'used' ? 'warning' : 'error'}>
-                                        {(log.status || 'UNKNOWN').toUpperCase()}
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                                    <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                                        {new Date(log.created_at).toLocaleString()}
+                                    </span>
+                                    <Badge type={log.result === 'valid' ? 'success' : 'error'}>
+                                        {(log.result || 'UNKNOWN').toUpperCase()}
                                     </Badge>
                                 </div>
                             </div>

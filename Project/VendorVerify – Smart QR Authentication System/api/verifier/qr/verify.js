@@ -134,28 +134,39 @@ async function fetchLocation(ip) {
         return 'Unknown';
     }
 
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1500); // 1.5s timeout
+    const tryProvider = async (url, parseFn) => {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
 
-        const response = await fetch(`https://ipapi.co/${ip}/json/`, {
-            signal: controller.signal
-        });
+            const response = await fetch(url, {
+                signal: controller.signal,
+                headers: { 'User-Agent': 'VendorVerify-App/1.0' }
+            });
+            clearTimeout(timeoutId);
 
-        clearTimeout(timeoutId);
+            if (!response.ok) return null;
+            const data = await response.json();
+            return parseFn(data);
+        } catch (e) {
+            console.warn(`Lookup failed for ${url}:`, e.message);
+            return null;
+        }
+    };
 
-        if (!response.ok) return 'Unknown';
-
-        const data = await response.json();
-
-        // ipapi.co returns 'error' field if something goes wrong
-        if (data.error) return 'Unknown';
-
-        // Join parts with comma, filtering out empty values
+    // Provider 1: ipapi.co (HTTPS, Precision)
+    let location = await tryProvider(`https://ipapi.co/${ip}/json/`, (data) => {
+        if (data.error) return null;
         return [data.city, data.region, data.country_name].filter(Boolean).join(', ');
-    } catch (error) {
-        // Silent fail for location lookup
-        console.warn('Location lookup failed:', error.message);
-        return 'Unknown';
-    }
+    });
+
+    if (location) return location;
+
+    // Provider 2: ip-api.com (HTTP Fallback, Fast)
+    location = await tryProvider(`http://ip-api.com/json/${ip}`, (data) => {
+        if (data.status !== 'success') return null;
+        return [data.city, data.regionName, data.country].filter(Boolean).join(', ');
+    });
+
+    return location || 'Unknown';
 }

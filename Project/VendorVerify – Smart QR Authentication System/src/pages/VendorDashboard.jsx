@@ -370,19 +370,19 @@ const VendorOverview = ({ createdProductSignal }) => {
                                 <div key={log.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem', borderBottom: '1px solid var(--border)' }}>
                                     <div style={{
                                         width: '40px', height: '40px', borderRadius: '50%',
-                                        backgroundColor: log.status === 'valid' ? 'rgba(16, 185, 129, 0.1)' :
-                                            log.status === 'used' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                        backgroundColor: log.result === 'valid' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        color: log.status === 'valid' ? 'var(--success)' :
-                                            log.status === 'used' ? 'var(--warning)' : 'var(--error)'
+                                        color: log.result === 'valid' ? 'var(--success)' : 'var(--error)'
                                     }}>
-                                        {log.status === 'valid' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+                                        {log.result === 'valid' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{log.products?.name || 'Unknown Product'}</div>
-                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{log.location || 'Unknown Location'} • {new Date(log.created_at).toLocaleTimeString()}</div>
+                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                            Scanned by {log.verifier_name || 'Anonymous'} • {new Date(log.created_at).toLocaleString()}
+                                        </div>
                                     </div>
-                                    <Badge type={log.status === 'valid' ? 'success' : log.status === 'used' ? 'warning' : 'error'}>{log.status}</Badge>
+                                    <Badge type={log.result === 'valid' ? 'success' : 'error'}>{log.result}</Badge>
                                 </div>
                             ))}
                             {history.length === 0 && (
