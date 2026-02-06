@@ -30,7 +30,7 @@ const VerifierDashboard = () => {
 
     return (
         <DashboardLayout role="Verifier" navItems={navItems}>
-            <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div className="fade-in" style={{ display: 'flex', flexDirection: 'column' }}>
                 <Routes>
                     <Route index element={<VerifierOverview />} />
                     <Route path="history" element={<VerifierHistory />} />
