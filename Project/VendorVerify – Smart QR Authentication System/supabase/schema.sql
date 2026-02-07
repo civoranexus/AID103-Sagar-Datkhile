@@ -77,8 +77,21 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE security_alerts ENABLE ROW LEVEL SECURITY;
 
 -- Policies
--- Users: Everyone can read their own profile. Allow insert during registration.
-CREATE POLICY "Users can view own profile" ON users FOR SELECT USING (auth.uid() = id);
+-- Helper function to avoid recursion in policies
+CREATE OR REPLACE FUNCTION is_admin() 
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM users 
+    WHERE id = auth.uid() AND role = 'admin'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Users: Everyone can read their own profile. Admins can read all.
+CREATE POLICY "Users can view own profile and admins can view all" ON users FOR SELECT USING (
+  auth.uid() = id OR is_admin()
+);
 CREATE POLICY "Users can insert own profile" ON users FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Vendors: Vendors can view/edit their own profiles.

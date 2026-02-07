@@ -26,16 +26,22 @@ const Login = () => {
 
             if (loginError) throw loginError;
 
-            // Check if profile exists
+            // Check if profile exists and status
             const { data: userData, error: roleError } = await supabase
                 .from('users')
-                .select('role')
+                .select('role, status')
                 .eq('id', data.user.id)
                 .single();
 
             if (roleError || !userData) {
                 console.error('Profile fetch failed:', roleError);
                 addToast('Account exists but profile is missing. Please Register again.', 'warning');
+                await supabase.auth.signOut();
+                return;
+            }
+
+            if (userData.status === 'banned') {
+                addToast('Your account has been suspended. Please contact support.', 'error');
                 await supabase.auth.signOut();
                 return;
             }

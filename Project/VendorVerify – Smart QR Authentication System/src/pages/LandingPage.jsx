@@ -124,7 +124,7 @@ const LandingPage = () => {
                         <ShieldCheck size={16} /> Secure Supply Chain Solution
                     </div>
                     <h1 className="font-display" style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', lineHeight: 1.1, marginBottom: '1.5rem', color: 'var(--primary)' }}>
-                        Verify Products. <span style={{ color: 'var(--accent)' }}>Prevent Counterfeits.</span><br />Build Trust.
+                        Proof of Authenticity, <br /><span style={{ color: 'var(--accent)' }}>One Scan Away.</span>
                     </h1>
                     <p style={{ fontSize: '1.25rem', color: 'var(--text-muted)', marginBottom: '3rem', maxWidth: '600px', margin: '0 auto 3rem' }}>
                         Vendor Verify is a decentralized, secure QR-based authentication system that helps verify product authenticity in real time.
